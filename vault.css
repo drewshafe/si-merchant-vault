@@ -318,7 +318,8 @@
 .mv-inst-steps li::before { content: counter(s); grid-row: span 2; width: calc(2.1 * var(--u)); height: calc(2.1 * var(--u)); border-radius: 50%; background: var(--mv-brand); display: grid; place-items: center; font: 800 calc(.95 * var(--u)) var(--mv-display); align-self: center; }
 .mv-inst-steps b { font: 800 calc(1 * var(--u)) var(--mv-display); }
 .mv-inst-steps span { font-size: calc(.92 * var(--u)); color: rgba(255,255,255,.75); }
-.mv-inst-shot { margin-top: calc(1.4 * var(--u)); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 28px rgba(0,0,0,.35); background: #fff; }
+.mv-inst-shot { display: block; position: relative; margin-top: calc(1.4 * var(--u)); border-radius: 12px; overflow: hidden; box-shadow: 0 10px 28px rgba(0,0,0,.35); background: #fff; text-decoration: none; }
+.mv-inst-shot:hover .mv-teaser-cta { transform: translateY(-2px); }
 .mv-inst-shot img { width: 100%; height: auto; }
 .mv-pnl-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: calc(1.1 * var(--u)); font: 600 13px var(--mv-body); color: rgba(255,255,255,.85); }
 .mv-pnl-tools select { margin-left: 6px; border-radius: 6px; padding: 3px 6px; font: inherit; color: #111; }

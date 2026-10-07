@@ -3,7 +3,8 @@
 // Reviews + examples imported from the Aligned "Overview" template (Oct 2026).
 window.MV_LIB = {
   install: [
-    { key: 'shopify', label: 'Shopify', color: '#5e8e3e', url: 'https://apps.shopify.com/shipinsure-order-protection' },
+    // shot: default preview image in the Install panel for this platform (a vault's own upload overrides it)
+    { key: 'shopify', label: 'Shopify', color: '#5e8e3e', url: 'https://apps.shopify.com/shipinsure-order-protection', shot: 'install-shopify.jpg', shotLabel: 'View on the Shopify App Store' },
     { key: 'woocommerce', label: 'WooCommerce', color: '#7f54b3', url: 'https://wordpress.org/plugins/shipinsure-for-woocommerce/' },
     { key: 'bigcommerce', label: 'BigCommerce', color: '#121118', url: 'https://login.bigcommerce.com/deep-links/marketplace/apps/27696/?mktid=aWQlM0E5MDQtR1NCLTkwMSUyNnRva2VuJTNBX21jaC1iaWdjb21tZXJjZS5jb20tYzZjMTE3YTdjNTk0NGMwZWUzOGZhYjdlMmE3OWEzOTc%3D' }
   ],

@@ -616,16 +616,19 @@
     if (P === 'install') {
       const plat = (v.install && v.install.platform) || 'shopify';
       const list = L.install.slice().sort((a, b) => (b.key === plat) - (a.key === plat));
-      const img = v.install && v.install.image;
+      const mine = L.install.find(p => p.key === plat) || L.install[0] || {};
+      const own = v.install && v.install.image;
+      const img = own || (mine.shot ? libImg(mine.shot) : '');
       return '<h3 class="mv-pnl-title">Install ShipInsure</h3>' +
         '<div class="mv-inst-grid">' + list.map(p =>
           '<div class="mv-inst' + (p.key === plat ? ' is-mine' : '') + '" style="--pc:' + p.color + '">' +
           (p.key === plat ? '<span class="mv-inst-tag">' + esc(merchantName(v) ? merchantName(v) + '’s platform' : 'Your platform') + '</span>' : '') +
           '<b>' + esc(p.label) + '</b><a class="mv-inst-go" href="' + esc(p.url) + '" target="_blank" rel="noopener" data-act="panel-open" data-label="Install on ' + esc(p.label) + '">Install on ' + esc(p.label) + ' →</a></div>').join('') + '</div>' +
         (edit ? '<div class="mv-pnl-tools"><label>Merchant platform <select data-act="install-platform">' + L.install.map(p => '<option value="' + p.key + '"' + (p.key === plat ? ' selected' : '') + '>' + esc(p.label) + '</option>').join('') + '</select></label>' +
-          '<button type="button" class="mv-chip" data-act="install-image">' + IC.image + '<span>' + (img ? 'Replace app screenshot' : 'Add app screenshot') + '</span></button></div>' : '') +
-        (img ? '<div class="mv-inst-shot"><img alt="ShipInsure in your store admin" src="' + esc(img) + '"></div>' :
-          '<ol class="mv-inst-steps"><li><b>Install the app</b><span>Takes a couple of minutes — nothing goes live yet.</span></li><li><b>Kickoff with your CSM</b><span>We set up protection, branding and claims on staging with you.</span></li><li><b>Review staging, then go live</b><span>You approve everything before shoppers see it.</span></li></ol>');
+          '<button type="button" class="mv-chip" data-act="install-image">' + IC.image + '<span>' + (own ? 'Replace screenshot' : img ? 'Use a different screenshot' : 'Add app screenshot') + '</span></button></div>' : '') +
+        (img ? '<a class="mv-inst-shot" href="' + esc(mine.url || '#') + '" target="_blank" rel="noopener" data-act="panel-open" data-label="' + esc(mine.shotLabel || ('Install on ' + (mine.label || ''))) + '">' +
+          '<img alt="ShipInsure on ' + esc(mine.label || 'your platform') + '" src="' + esc(img) + '"><span class="mv-teaser-cta">' + esc(mine.shotLabel || ('Install on ' + (mine.label || ''))) + ' ↗</span></a>' : '') +
+        '<ol class="mv-inst-steps"><li><b>Install the app</b><span>Takes a couple of minutes — nothing goes live yet.</span></li><li><b>Kickoff with your CSM</b><span>We set up protection, branding and claims on staging with you.</span></li><li><b>Review staging, then go live</b><span>You approve everything before shoppers see it.</span></li></ol>';
     }
     if (P === 'examples') {
       return '<h3 class="mv-pnl-title">Live Examples &amp; Case Studies</h3>' + libNote + '<div class="mv-ex-list">' + L.examples.map((x, i) =>
