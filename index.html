@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Merchant Vault · ShipInsure</title>
+<link rel="icon" type="image/png" href="assets/vault-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Lexend+Deca:wght@400;500&display=swap">
+<link rel="stylesheet" href="vault.css?v=20261006a">
+<style>
+  :root {
+    --st-rail: #12131f; --st-rail-2: #1b1c2c; --st-rail-line: rgba(255,255,255,.08); --st-rail-ink: #e9eaf5; --st-rail-muted: #8d90ab;
+    --st-gold: #e9c46a; --st-brand: #6675FF; --st-bg: #e9eaf3; --st-ink: #1b1d2e; --st-muted: #6b7090; --st-line: #e1e3ef;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: "Nunito Sans", system-ui, -apple-system, sans-serif; color: var(--st-ink); background: var(--st-bg); overflow: hidden; }
+  button, input, select { font: inherit; }
+  .st-app { display: flex; height: 100%; }
+
+  /* Rail */
+  .st-rail { width: 270px; flex-shrink: 0; background: var(--st-rail); color: var(--st-rail-ink); display: flex; flex-direction: column; border-right: 1px solid #000; transition: margin-left .2s; }
+  .st-app.rail-off .st-rail { margin-left: -270px; }
+  .st-brand { padding: 14px 14px 10px; border-bottom: 1px solid var(--st-rail-line); }
+  .st-brand img { height: 44px; width: auto; display: block; }
+  .st-new { margin: 12px 12px 8px; padding: 10px 12px; border: 0; border-radius: 10px; cursor: pointer; font-family: "Montserrat", sans-serif; font-weight: 800; font-size: 14px; color: #14141c;
+    background: linear-gradient(120deg, #b8862b, #e9c46a 45%, #fff1c2 55%, #e9c46a 70%); box-shadow: 0 4px 14px rgba(233,196,106,.25); }
+  .st-new:hover { filter: brightness(1.05); }
+  .st-search { margin: 0 12px 8px; padding: 8px 11px; border-radius: 8px; border: 1px solid var(--st-rail-line); background: var(--st-rail-2); color: var(--st-rail-ink); outline: none; }
+  .st-search:focus { border-color: rgba(233,196,106,.6); }
+  .st-filters { display: flex; gap: 4px; padding: 0 12px 8px; }
+  .st-filters button { flex: 1; padding: 5px 4px; border-radius: 6px; border: 1px solid var(--st-rail-line); background: transparent; color: var(--st-rail-muted); font-size: 11px; font-weight: 700; cursor: pointer; }
+  .st-filters button.on { background: var(--st-rail-2); color: var(--st-gold); border-color: rgba(233,196,106,.45); }
+  .st-list { flex: 1; overflow-y: auto; padding: 0 8px 10px; }
+  .st-group { font: 800 10px/1 "Montserrat", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--st-rail-muted); padding: 12px 6px 6px; }
+  .st-row { display: grid; grid-template-columns: 34px 1fr; gap: 9px; align-items: center; padding: 8px 8px; border-radius: 9px; cursor: pointer; border: 1px solid transparent; }
+  .st-row:hover { background: var(--st-rail-2); }
+  .st-row.on { background: #23253a; border-color: rgba(233,196,106,.45); }
+  .st-logo { width: 34px; height: 34px; border-radius: 50%; background: #fff; overflow: hidden; display: grid; place-items: center; font: 800 12px "Montserrat", sans-serif; color: #fff; }
+  .st-logo img { width: 100%; height: 100%; object-fit: contain; padding: 3px; }
+  .st-logo.mono { background: #3a3d55; }
+  .st-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st-meta { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--st-rail-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; }
+  .st-mini { width: 34px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; flex-shrink: 0; }
+  .st-mini i { display: block; height: 100%; background: #1fc8bb; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 10.5px; font-weight: 800; letter-spacing: .02em; }
+  .pill.none { background: rgba(255,255,255,.08); color: #a6a9c2; }
+  .pill.active { background: rgba(31,200,187,.16); color: #4fe0d4; }
+  .pill.hot { background: rgba(255,120,60,.18); color: #ff9d6c; }
+  .pill.cold { background: rgba(120,160,255,.14); color: #9db7ff; }
+  .pill.local { background: rgba(233,196,106,.16); color: var(--st-gold); }
+  .pill.won { background: rgba(31,200,120,.18); color: #5be39a; }
+  .pill.lost { background: rgba(255,90,90,.14); color: #ff8f8f; }
+  .st-empty-list { color: var(--st-rail-muted); font-size: 13px; padding: 16px 8px; line-height: 1.45; }
+  .st-acct { border-top: 1px solid var(--st-rail-line); padding: 10px 12px; font-size: 12px; color: var(--st-rail-muted); display: flex; align-items: center; gap: 8px; }
+  .st-acct span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .st-acct button { background: transparent; border: 1px solid var(--st-rail-line); color: var(--st-rail-ink); border-radius: 6px; padding: 4px 9px; font-size: 12px; cursor: pointer; }
+  .st-dot { width: 8px; height: 8px; border-radius: 50%; background: #6b6e86; flex-shrink: 0; }
+  .st-dot.ok { background: #3ddc97; } .st-dot.warn { background: var(--st-gold); }
+
+  /* Main */
+  .st-main { flex: 1; min-width: 0; display: flex; flex-direction: column; position: relative; }
+  .st-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border-bottom: 1px solid var(--st-line); min-height: 52px; flex-wrap: wrap; }
+  .st-iconbtn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--st-line); background: #fff; cursor: pointer; display: grid; place-items: center; color: var(--st-muted); flex-shrink: 0; }
+  .st-iconbtn svg { width: 17px; height: 17px; }
+  .st-title { font: 800 16px/1.2 "Montserrat", sans-serif; letter-spacing: -.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 32ch; }
+  .st-status { padding: 5px 8px; border-radius: 7px; border: 1px solid var(--st-line); background: #f6f7fc; font-size: 12.5px; font-weight: 700; color: var(--st-ink); cursor: pointer; }
+  .st-saved { font-size: 12.5px; color: var(--st-muted); white-space: nowrap; }
+  .st-saved.err { color: #c0392b; font-weight: 700; }
+  .st-spacer { flex: 1; }
+  .st-seg { display: inline-flex; border: 1px solid var(--st-line); border-radius: 8px; overflow: hidden; }
+  .st-seg button { border: 0; background: #fff; padding: 6px 10px; font-size: 12.5px; font-weight: 700; color: var(--st-muted); cursor: pointer; }
+  .st-seg button.on { background: #eef0fb; color: #4a5be8; }
+  .st-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--st-line); background: #fff; color: var(--st-ink); font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; text-decoration: none; }
+  .st-btn:hover { background: #f6f7fc; }
+  .st-btn.primary { background: var(--st-brand); color: #fff; border-color: var(--st-brand); }
+  .st-btn.primary:hover { filter: brightness(1.06); background: var(--st-brand); }
+  .st-btn .n { background: #e2574c; color: #fff; border-radius: 99px; padding: 0 6px; font-size: 11px; }
+  .st-menu { position: absolute; z-index: 30; right: 12px; top: 50px; background: #fff; border: 1px solid var(--st-line); border-radius: 10px; box-shadow: 0 12px 32px rgba(20,22,50,.18); padding: 6px; min-width: 220px; }
+  .st-menu button { display: block; width: 100%; text-align: left; padding: 8px 10px; border: 0; background: transparent; border-radius: 7px; cursor: pointer; font-size: 13.5px; font-weight: 600; }
+  .st-menu button:hover { background: #f2f3fa; }
+  .st-menu hr { border: 0; border-top: 1px solid var(--st-line); margin: 5px 4px; }
+  .st-menu .danger { color: #c0392b; }
+  .st-banner { background: #fff7e3; color: #7a5a12; border-bottom: 1px solid #f1dfb0; padding: 8px 14px; font-size: 13px; }
+  .st-banner code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; }
+  .st-canvas { flex: 1; overflow: auto; position: relative; }
+  .st-stage { margin: 0 auto; background: #fff; box-shadow: 0 8px 40px rgba(20,22,50,.14); transform-origin: top left; }
+  .st-stage.mobile { margin: 18px auto; border-radius: 26px; overflow: hidden; border: 8px solid #15151c; }
+  .st-welcome { position: absolute; inset: 0; display: grid; place-items: center; padding: 30px; text-align: center; }
+  .st-welcome-card { max-width: 520px; }
+  .st-welcome img { width: 120px; margin: 0 auto 10px; display: block; }
+  .st-welcome h2 { font: 900 26px/1.15 "Montserrat", sans-serif; letter-spacing: -.02em; margin: 0 0 8px; }
+  .st-welcome p { color: var(--st-muted); font-size: 15px; line-height: 1.5; margin: 0 0 18px; }
+
+  /* Activity drawer */
+  .st-activity { position: absolute; top: 52px; right: 0; bottom: 0; width: 380px; max-width: 100%; background: #fff; border-left: 1px solid var(--st-line); box-shadow: -10px 0 30px rgba(20,22,50,.12); z-index: 20; display: none; flex-direction: column; }
+  .st-activity.open { display: flex; }
+  .st-act-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--st-line); }
+  .st-act-head h3 { margin: 0; flex: 1; font: 800 16px "Montserrat", sans-serif; }
+  .st-act-body { flex: 1; overflow-y: auto; padding: 12px 14px 18px; }
+  .st-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .st-kpi { background: #f6f7fc; border-radius: 10px; padding: 9px 10px; }
+  .st-kpi b { display: block; font: 800 19px/1.1 "Montserrat", sans-serif; }
+  .st-kpi span { font-size: 11px; color: var(--st-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .st-h { font: 800 11px "Montserrat", sans-serif; text-transform: uppercase; letter-spacing: .07em; color: var(--st-muted); margin: 16px 0 6px; }
+  .st-q { border: 1px solid #f0d9a8; background: #fffaf0; border-radius: 10px; padding: 9px 11px; margin-bottom: 7px; font-size: 14px; }
+  .st-q small { display: block; color: var(--st-muted); margin-top: 4px; font-size: 12px; }
+  .st-q a { color: #4a5be8; font-weight: 700; }
+  .st-feed { list-style: none; margin: 0; padding: 0; }
+  .st-feed li { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 7px 0; border-bottom: 1px solid #f0f1f7; font-size: 13.5px; }
+  .st-feed li small { color: var(--st-muted); white-space: nowrap; font-size: 12px; }
+  .st-feed li .who { display: block; color: var(--st-muted); font-size: 12px; }
+  .st-vis { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; font-size: 13.5px; padding: 6px 0; border-bottom: 1px solid #f0f1f7; }
+  .st-note { color: var(--st-muted); font-size: 13px; line-height: 1.45; }
+  @media (max-width: 760px) { .st-rail { position: absolute; z-index: 40; height: 100%; } .st-app:not(.rail-off) .st-main { pointer-events: none; opacity: .4; } }
+</style>
+</head>
+<body>
+<div class="st-app" id="app">
+  <aside class="st-rail">
+    <div class="st-brand"><img src="assets/merchantvault_logo_light.png" alt="Merchant Vault"></div>
+    <button class="st-new" id="newBtn">＋ New Vault</button>
+    <input class="st-search" id="search" placeholder="Search vaults…" autocomplete="off">
+    <div class="st-filters" id="filters">
+      <button data-f="all" class="on">All</button><button data-f="mine">Mine</button><button data-f="attn">Needs attention</button>
+    </div>
+    <div class="st-list" id="list"></div>
+    <div class="st-acct"><i class="st-dot" id="dot"></i><span id="acct">Checking cloud…</span><button id="acctBtn" hidden></button></div>
+  </aside>
+  <main class="st-main">
+    <div class="st-bar" id="bar">
+      <button class="st-iconbtn" id="railBtn" title="Toggle vault list"></button>
+      <div class="st-title" id="title">Merchant Vault</div>
+      <select class="st-status" id="status" hidden title="Vault status">
+        <option value="draft">Draft</option><option value="shared">Shared</option><option value="active">Active</option>
+        <option value="won">Won</option><option value="lost">Lost</option><option value="archived">Archived</option>
+      </select>
+      <span class="st-saved" id="saved"></span>
+      <span class="st-spacer"></span>
+      <div class="st-seg" id="viewSeg" hidden><button data-v="desktop" class="on">Desktop</button><button data-v="mobile">Mobile</button></div>
+      <button class="st-btn" id="previewBtn" hidden>Preview ↗</button>
+      <button class="st-btn" id="actBtn" hidden>Activity</button>
+      <button class="st-btn primary" id="copyBtn" hidden>Copy merchant link</button>
+      <button class="st-iconbtn" id="moreBtn" hidden title="More"></button>
+    </div>
+    <div id="banner"></div>
+    <div class="st-canvas" id="canvas">
+      <div class="st-welcome" id="welcome">
+        <div class="st-welcome-card">
+          <img src="assets/vault-icon.png" alt="">
+          <h2>Merchant Vault</h2>
+          <p>One link per merchant with their deck, checkout designs, both teams and a shared action plan. The merchant can check off steps and add their team; you see every visit, page and question.</p>
+          <button class="st-btn primary" id="welcomeNew">＋ Create a vault</button>
+        </div>
+      </div>
+      <div class="st-stage" id="stage" hidden><div id="vault"></div></div>
+    </div>
+    <aside class="st-activity" id="activity">
+      <div class="st-act-head"><h3>Activity</h3><button class="st-btn" id="actRefresh">Refresh</button><button class="st-iconbtn" id="actClose" title="Close">✕</button></div>
+      <div class="st-act-body" id="actBody"></div>
+    </aside>
+    <div class="st-menu" id="menu" hidden>
+      <button data-m="merchant">Merchant name, logo &amp; folder…</button>
+      <button data-m="access">Who can open the link…</button>
+      <button data-m="duplicate">Duplicate for another merchant…</button>
+      <button data-m="defaults">Save team, buttons &amp; welcome as my defaults</button>
+      <hr>
+      <button data-m="archive">Archive vault</button>
+      <button data-m="delete" class="danger">Delete vault…</button>
+    </div>
+  </main>
+</div>
+
+<script src="https://drewshafe.github.io/si-roi-calculator/sb.js"></script>
+<script src="vault-core.js?v=20261006a"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const esc = MV.esc;
+  const DESIGN_W = 1280;
+  const CALC = 'https://drewshafe.github.io/si-roi-calculator/';
+  const LS = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  $('railBtn').innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+  $('moreBtn').innerHTML = MV.IC.dots;
+
+  // ── State ──
+  let user = null, cloud = null;          // cloud: null = unknown, true = ready, false = tables missing / offline
+  let rows = [];                          // cloud vault rows (list fields)
+  let locals = LS.get('mv_local_vaults', {});
+  let merchants = [];                     // calculator merchant folders (for logos + ROI links)
+  let cur = null;                         // { id, local, row, data, syncedAt }
+  let filter = 'all', view = 'desktop', q = '';
+  const root = $('vault');
+
+  const isLocalId = id => /^local-/.test(id);
+  const myRepKey = () => {
+    const e = (user && user.email || '').toLowerCase();
+    const r = MV.REPS.find(x => x.email === e);
+    return r ? r.key : 'drew';
+  };
+
+  // ── Cloud boot ──
+  async function boot() {
+    try { user = window.SIsb ? await SIsb.currentUser() : null; } catch (e) { user = null; }
+    if (user) {
+      try { rows = await MV.API.list(); cloud = true; }
+      catch (e) { cloud = false; cloudErr = e; }
+      try { merchants = await SIsb.listMerchants(); } catch (e) { merchants = []; }
+    } else cloud = null;
+    renderAcct(); renderBanner(); renderList();
+    const want = (/[#&]v=([\w-]+)/.exec(location.hash) || [])[1] || LS.get('mv_last', null);
+    if (want && (locals[want] || rows.some(r => r.id === want))) open(want);
+  }
+  let cloudErr = null;
+
+  function renderAcct() {
+    const dot = $('dot'), acct = $('acct'), btn = $('acctBtn');
+    btn.hidden = false;
+    if (user) {
+      dot.className = 'st-dot ' + (cloud ? 'ok' : 'warn');
+      acct.textContent = user.email + (cloud ? '' : ' · local only');
+      btn.textContent = 'Sign out';
+      btn.onclick = async () => { await SIsb.signOut(); location.reload(); };
+    } else {
+      dot.className = 'st-dot';
+      acct.textContent = 'Not signed in · local drafts';
+      btn.textContent = 'Sign in';
+      btn.onclick = signIn;
+    }
+  }
+  async function signIn() {
+    const r = await MV.form({ title: 'Sign in to Merchant Vault', text: 'Same login as the calculators’ ☁ Cloud Save. We’ll email you a magic link — open it in this browser, then come back here and refresh.', fields: [{ key: 'email', label: 'ShipInsure email', type: 'email', required: true, placeholder: 'you@shipinsure.io' }], submit: 'Send magic link' });
+    if (!r) return;
+    try {
+      const { error } = await SIsb.signInMagic(r.email);
+      MV.toast(error ? 'Error: ' + error.message : 'Magic link sent to ' + r.email, 4000);
+    } catch (e) { MV.toast('Error: ' + (e.message || e), 4000); }
+  }
+  function renderBanner() {
+    const b = $('banner');
+    if (user && cloud === false) {
+      const missing = cloudErr && /vaults|schema cache|does not exist|PGRST20/i.test(cloudErr.message || cloudErr.code || '');
+      b.innerHTML = '<div class="st-banner">' + (missing
+        ? '☁ Cloud vault tables aren’t set up yet — run <code>vault-schema.sql</code> in Supabase. Until then vaults save as local drafts in this browser.'
+        : '☁ Couldn’t reach the cloud (' + esc(cloudErr && cloudErr.message || 'offline') + '). Working with local drafts.') + '</div>';
+    } else if (!user) {
+      b.innerHTML = '<div class="st-banner">Not signed in — new vaults save as local drafts in this browser. <a href="#" id="bannerSignIn">Sign in</a> to save to the cloud and get a merchant link.</div>';
+      const a = $('bannerSignIn'); if (a) a.onclick = e => { e.preventDefault(); signIn(); };
+    } else b.innerHTML = '';
+  }
+
+  // ── List ──
+  function allRows() {
+    const out = rows.map(r => Object.assign({}, r, { local: false }));
+    Object.values(locals).forEach(l => out.push({ id: l.id, merchant: (l.data.merchant && l.data.merchant.name) || 'Untitled', status: l.status || 'draft', updated_at: l.updated_at, local: true, plan: l.data.plan, logo: l.data.merchant && l.data.merchant.logo, visit_count: 0 }));
+    return out;
+  }
+  function rel(iso) {
+    if (!iso) return '';
+    const s = (Date.now() - new Date(iso).getTime()) / 1000;
+    if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+    if (s < 86400 * 30) return Math.floor(s / 86400) + 'd ago';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  function pillFor(r) {
+    if (r.local) return '<span class="pill local">Local</span>';
+    if (r.status === 'won') return '<span class="pill won">Won</span>';
+    if (r.status === 'lost') return '<span class="pill lost">Lost</span>';
+    const e = MV.engagement(r);
+    return '<span class="pill ' + e.key + '">' + e.label + '</span>';
+  }
+  function renderList() {
+    let list = allRows();
+    if (q) list = list.filter(r => (r.merchant || '').toLowerCase().includes(q));
+    if (filter === 'mine' && user) list = list.filter(r => r.local || r.rep_id === user.id);
+    if (filter === 'attn') list = list.filter(r => !r.local && (r.updated_by === 'merchant' || /question/i.test(r.last_action || '') || MV.engagement(r).key === 'cold'));
+    list.sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
+    const el = $('list');
+    if (!list.length) {
+      el.innerHTML = '<div class="st-empty-list">' + (q || filter !== 'all' ? 'No vaults match.' : 'No vaults yet. Click <b>＋ New Vault</b> to build one for your next demo.') + '</div>';
+      return;
+    }
+    el.innerHTML = list.map(r => {
+      const pct = MV.planStats(r.plan).pct;
+      const logo = r.logo ? '<div class="st-logo"><img alt="" src="' + esc(r.logo) + '"></div>' : '<div class="st-logo mono">' + esc(MV.initials(r.merchant)) + '</div>';
+      const visits = r.local ? '' : (r.visit_count ? r.visit_count + ' visit' + (r.visit_count === 1 ? '' : 's') + ' · ' : '');
+      const ping = !r.local && r.updated_by === 'merchant' ? ' title="Merchant made changes"' : '';
+      return '<div class="st-row' + (cur && cur.id === r.id ? ' on' : '') + '" data-id="' + esc(r.id) + '"' + ping + '>' + logo +
+        '<div style="min-width:0"><div class="st-name">' + esc(r.merchant || 'Untitled') + (ping ? ' <span style="color:#e9c46a">●</span>' : '') + '</div>' +
+        '<div class="st-meta">' + pillFor(r) + '<span>' + visits + rel(r.last_visit_at || r.updated_at) + '</span><span class="st-mini" title="Plan ' + pct + '%"><i style="width:' + pct + '%"></i></span></div></div></div>';
+    }).join('');
+    el.querySelectorAll('.st-row').forEach(n => n.onclick = () => open(n.dataset.id));
+  }
+  $('search').oninput = e => { q = e.target.value.trim().toLowerCase(); renderList(); };
+  $('filters').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    filter = b.dataset.f;
+    $('filters').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    renderList();
+  };
+
+  // ── Open / render a vault ──
+  async function open(id) {
+    await flushSave();
+    closeMenu();
+    let data, row = null;
+    if (isLocalId(id)) {
+      const l = locals[id]; if (!l) return;
+      data = MV.clone(l.data);
+    } else {
+      try { row = await MV.API.get(id); } catch (e) { MV.toast('Couldn’t open that vault: ' + (e.message || e), 4000); return; }
+      data = row.data && row.data.v ? row.data : MV.template({ merchant: row.merchant });
+    }
+    cur = { id: id, local: isLocalId(id), row: row, data: data, syncedAt: row && row.updated_at };
+    LS.set('mv_last', id);
+    history.replaceState(null, '', location.pathname + location.search + '#v=' + id);
+    $('welcome').hidden = true; $('stage').hidden = false;
+    if (rootRef._mv) { Object.values(rootRef._mv.cleanups || {}).forEach(f => f()); rootRef._mv = null; }
+    MV.render(rootRef, cur.data, ctx());
+    fit();
+    syncBar();
+    renderList();
+    if ($('activity').classList.contains('open')) loadActivity();
+    if (row && row.updated_by === 'merchant') setSaved('Merchant updated this ' + rel(row.updated_at));
+  }
+  let rootRef = root;
+
+  function ctx() {
+    return {
+      mode: 'edit',
+      onChange: (kind, info) => { scheduleSave(); if (info && info.path === 'merchant.name') syncTitle(); },
+      upload: uploadFile,
+      pickMerchant: editMerchant
+    };
+  }
+
+  function syncTitle() { $('title').textContent = (cur && cur.data.merchant.name) || 'Untitled vault'; }
+  function syncBar() {
+    const has = !!cur;
+    ['status', 'viewSeg', 'previewBtn', 'actBtn', 'copyBtn', 'moreBtn'].forEach(k => $(k).hidden = !has);
+    if (!has) { $('title').textContent = 'Merchant Vault'; $('saved').textContent = ''; return; }
+    syncTitle();
+    $('status').value = cur.local ? (locals[cur.id].status || 'draft') : (cur.row.status || 'draft');
+    $('actBtn').hidden = cur.local;
+    const qn = !cur.local && /question/i.test(cur.row.last_action || '') ? ' <span class="n">?</span>' : '';
+    $('actBtn').innerHTML = 'Activity' + qn;
+    setSaved(cur.local ? 'Local draft' : 'Saved');
+  }
+  function setSaved(t, err) { const s = $('saved'); s.textContent = t; s.classList.toggle('err', !!err); }
+
+  // Fit the 1280px design canvas into the pane (CSS zoom keeps editing + clicks exact).
+  function fit() {
+    const stage = $('stage'), canvas = $('canvas');
+    if (stage.hidden) return;
+    if (view === 'mobile') { stage.classList.add('mobile'); stage.style.width = '390px'; stage.style.zoom = 1; return; }
+    stage.classList.remove('mobile');
+    const avail = canvas.clientWidth - 2;
+    const z = Math.min(1, avail / DESIGN_W);
+    stage.style.width = DESIGN_W + 'px';
+    stage.style.zoom = z;
+  }
+  window.addEventListener('resize', fit);
+  if (window.ResizeObserver) new ResizeObserver(fit).observe($('canvas'));
+  $('viewSeg').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    view = b.dataset.v;
+    $('viewSeg').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    fit();
+  };
+  $('railBtn').onclick = () => { $('app').classList.toggle('rail-off'); setTimeout(fit, 220); };
+
+  // ── Save (debounced autosave) ──
+  let saveT = null, saving = null;
+  function scheduleSave() {
+    if (!cur) return;
+    setSaved('Saving…');
+    clearTimeout(saveT);
+    saveT = setTimeout(() => { saving = doSave(); }, 900);
+  }
+  async function flushSave() { if (saveT) { clearTimeout(saveT); saveT = null; saving = doSave(); } if (saving) await saving.catch(() => {}); }
+  async function doSave() {
+    saveT = null;
+    if (!cur) return;
+    const c = cur;
+    const d = c.data;
+    if (c.local) {
+      locals[c.id] = Object.assign(locals[c.id] || { id: c.id }, { data: MV.clone(d), updated_at: new Date().toISOString() });
+      LS.set('mv_local_vaults', locals);
+      setSaved('Saved locally');
+      renderList();
+      return;
+    }
+    try {
+      // Pull in anything the merchant changed since we loaded (plan checks, their team).
+      const srv = await MV.API.get(c.id);
+      if (srv.updated_at !== c.syncedAt && srv.updated_by === 'merchant') {
+        const dirty = (rootRef._mv && rootRef._mv.dirty) || {};
+        MV.mergeMerchant(d, srv.data, dirty);
+        if (c === cur) { MV.part(rootRef, 'plan'); MV.part(rootRef, 'team'); }
+      }
+      const res = await MV.API.update(c.id, { data: d, merchant: d.merchant.name || '', title: 'ShipInsure <> ' + (d.merchant.name || ''), merchant_ref: d.merchant.ref || null });
+      c.syncedAt = res.updated_at;
+      if (rootRef._mv) rootRef._mv.dirty = {};
+      const i = rows.findIndex(r => r.id === c.id);
+      if (i >= 0) Object.assign(rows[i], { merchant: d.merchant.name, updated_at: res.updated_at, updated_by: 'rep', plan: d.plan, logo: d.merchant.logo });
+      if (c.row) Object.assign(c.row, { updated_at: res.updated_at, updated_by: 'rep' });
+      if (c === cur) setSaved('Saved ✓');
+      renderList();
+    } catch (e) {
+      setSaved('Not saved — ' + (e.message || e), true);
+    }
+  }
+  window.addEventListener('beforeunload', e => { if (saveT) { doSave(); } });
+
+  async function uploadFile(file) {
+    if (file.size > 50 * 1024 * 1024) throw new Error('Max 50 MB per file');
+    if (user && cloud) return MV.API.upload(file, cur && !cur.local ? cur.id : 'draft');
+    // Local drafts: small images inline only.
+    if (/^image\//.test(file.type) && file.size < 400 * 1024) {
+      return await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+    }
+    throw new Error('Sign in (with cloud set up) to upload PDFs and large files');
+  }
+
+  // ── New vault ──
+  async function newVault(copyFrom) {
+    await flushSave();
+    const plans = Object.keys(MV.PLANS).map(k => [k, MV.PLANS[k].label]);
+    const r = await MV.form({
+      title: copyFrom ? 'Duplicate for another merchant' : 'New Merchant Vault',
+      text: copyFrom ? 'Copies the deck, designs, buttons and plan. Check-offs, merchant team and activity start fresh.' : (merchants.length ? 'Pick a calculator folder to pull in the logo and ROI link, or type a new merchant.' : ''),
+      fields: [
+        { key: 'merchant', label: 'Merchant', required: true, placeholder: 'Carnivore Society' },
+        merchants.length ? { key: 'folder', label: 'Calculator folder (logo + ROI link)', type: 'select', options: [['', '— none —']].concat(merchants.map(m => [m.id, m.name])),
+          fill: id => { const m = merchants.find(x => x.id === id); return m ? { merchant: m.name } : null; } } : null,
+        { key: 'meeting', label: 'Next meeting', type: 'date' },
+        copyFrom ? null : { key: 'plan', label: 'Action plan', type: 'select', options: plans }
+      ].filter(Boolean),
+      values: { plan: 'sales' }, submit: copyFrom ? 'Duplicate' : 'Create vault'
+    });
+    if (!r) return;
+    let data;
+    if (copyFrom) {
+      data = MV.clone(copyFrom);
+      data.merchant = { name: r.merchant, logo: '', domain: '' };
+      data.team.merchant = [MV.person(), MV.person()];
+      data.plan.stages.forEach(g => { g.steps = g.steps.filter(s => !s.by); g.steps.forEach(s => { s.id = MV.uid('s'); s.done = false; s.doneAt = ''; s.doneBy = ''; s.due = ''; }); });
+      data.buttons.forEach(b => { if (b.style === 'roi') b.url = ''; });
+      data.meeting = r.meeting || '';
+    } else {
+      data = MV.withDefaults(MV.template({ merchant: r.merchant, meeting: r.meeting, plan: r.plan, rep: myRepKey() }), LS.get('mv_defaults', null));
+    }
+    if (r.folder) await applyFolder(data, r.folder);
+    await createVault(data);
+  }
+  async function applyFolder(data, folderId) {
+    const m = merchants.find(x => x.id === folderId); if (!m) return;
+    data.merchant.ref = m.id;
+    if (m.logo_path) data.merchant.logo = m.logo_path;
+    try {
+      const cfgs = (await SIsb.listConfigs()).filter(c => c.merchant_ref === m.id || (c.merchant || '').toLowerCase() === m.name.toLowerCase());
+      if (cfgs.length) {
+        const roi = data.buttons.find(b => b.style === 'roi');
+        if (roi && !roi.url) roi.url = CALC + 'proposal.html?id=' + cfgs[0].id;
+      }
+    } catch (e) {}
+  }
+  async function createVault(data) {
+    if (user && cloud) {
+      try {
+        const row = await MV.API.create({ merchant: data.merchant.name, title: 'ShipInsure <> ' + data.merchant.name, data: data, merchant_ref: data.merchant.ref || null, status: 'draft' });
+        rows.unshift(Object.assign({}, row, { plan: data.plan, logo: data.merchant.logo }));
+        await open(row.id);
+        MV.toast('Vault created ✓');
+        return;
+      } catch (e) { MV.toast('Cloud save failed (' + (e.message || e) + ') — saved locally instead.', 4500); }
+    }
+    const id = 'local-' + MV.uid();
+    locals[id] = { id: id, data: data, status: 'draft', updated_at: new Date().toISOString() };
+    LS.set('mv_local_vaults', locals);
+    await open(id);
+  }
+  $('newBtn').onclick = () => newVault();
+  $('welcomeNew').onclick = () => newVault();
+
+  // ── Merchant / logo editor ──
+  async function editMerchant() {
+    if (!cur) return;
+    const m = cur.data.merchant;
+    const fields = [
+      { key: 'name', label: 'Merchant name', required: true },
+      merchants.length ? { key: 'folder', label: 'Load from calculator folder', type: 'select', options: [['', '— none —']].concat(merchants.map(x => [x.id, x.name])),
+        fill: id => { const f = merchants.find(x => x.id === id); return f ? { name: f.name, logo: f.logo_path || '' } : null; } } : null,
+      { key: 'logo', label: 'Logo', type: 'file', accept: 'image/*', upload: uploadFile, placeholder: 'Logo image link, or upload →' },
+      { key: 'domain', label: 'Store URL', placeholder: 'carnivoresociety.com' }
+    ].filter(Boolean);
+    const r = await MV.form({ title: 'Merchant', text: 'Square or round logos look best in the circle.', fields: fields, values: Object.assign({ folder: m.ref || '' }, m) });
+    if (!r) return;
+    m.name = r.name; m.logo = r.logo; m.domain = r.domain;
+    if (r.folder && r.folder !== m.ref) await applyFolder(cur.data, r.folder);
+    else if (!r.folder) m.ref = null;
+    MV.render(rootRef, cur.data, ctx());
+    syncTitle();
+    scheduleSave();
+  }
+
+  // ── Bar actions ──
+  function merchantLink() {
+    if (!cur || cur.local || !cur.row) return '';
+    return new URL('v.html?id=' + encodeURIComponent(cur.id) + '&k=' + encodeURIComponent(cur.row.edit_token), location.href).href;
+  }
+  window.mvMerchantLink = merchantLink;   // Rep Hub's "Copy Link" uses this (same origin)
+  $('copyBtn').onclick = async () => {
+    if (!cur) return;
+    if (cur.local) { MV.toast(user ? 'Cloud tables aren’t set up yet — run vault-schema.sql to get links.' : 'Sign in to save this vault to the cloud and get a merchant link.', 4000); return; }
+    await flushSave();
+    const link = merchantLink();
+    try { await navigator.clipboard.writeText(link); MV.toast('Merchant link copied ✓'); }
+    catch (e) { prompt('Copy the merchant link:', link); }
+    if ((cur.row.status || 'draft') === 'draft') setStatus('shared');
+  };
+  $('previewBtn').onclick = async () => {
+    if (!cur) return;
+    await flushSave();
+    const url = cur.local ? new URL('v.html#local=' + cur.id, location.href).href : merchantLink() + '&preview=1';
+    window.open(url, '_blank', 'noopener');
+  };
+  $('status').onchange = e => setStatus(e.target.value);
+  async function setStatus(s) {
+    if (!cur) return;
+    $('status').value = s;
+    if (cur.local) { locals[cur.id].status = s; LS.set('mv_local_vaults', locals); renderList(); return; }
+    try {
+      await MV.API.update(cur.id, { status: s });
+      cur.row.status = s;
+      const i = rows.findIndex(r => r.id === cur.id);
+      if (s === 'archived') { if (i >= 0) rows.splice(i, 1); MV.toast('Archived — the merchant link now shows “no longer available”.', 4000); closeVault(); }
+      else if (i >= 0) rows[i].status = s;
+      renderList();
+    } catch (e) { MV.toast('Couldn’t update status: ' + (e.message || e), 4000); }
+  }
+  function closeVault() {
+    cur = null; $('stage').hidden = true; $('welcome').hidden = false; $('activity').classList.remove('open');
+    history.replaceState(null, '', location.pathname + location.search); LS.set('mv_last', null); syncBar(); renderList();
+  }
+
+  // ⋯ menu
+  function closeMenu() { $('menu').hidden = true; }
+  $('moreBtn').onclick = e => { e.stopPropagation(); $('menu').hidden = !$('menu').hidden; };
+  document.addEventListener('click', e => { if (!e.target.closest('#menu')) closeMenu(); });
+  $('menu').onclick = async e => {
+    const b = e.target.closest('button[data-m]'); if (!b || !cur) return;
+    closeMenu();
+    const m = b.dataset.m;
+    if (m === 'merchant') editMerchant();
+    else if (m === 'access') {
+      const r = await MV.form({ title: 'Who can open the link', fields: [{ key: 'access', label: 'Access', type: 'select', options: [['link', 'Anyone with the link'], ['name', 'Anyone with the link — ask for their name'], ['email', 'Require name + work email to enter']] }],
+        values: { access: (cur.data.settings && cur.data.settings.access) || 'link' } });
+      if (r) { cur.data.settings = Object.assign({}, cur.data.settings, { access: r.access }); scheduleSave(); MV.toast('Access updated'); }
+    }
+    else if (m === 'duplicate') newVault(cur.data);
+    else if (m === 'defaults') {
+      const d = cur.data;
+      LS.set('mv_defaults', { welcome: d.welcome, teamSi: d.team.si.filter(p => p.name), buttons: d.buttons.map(b => b.style === 'roi' ? Object.assign({}, b, { url: '' }) : b), cover: d.cover || '' });
+      MV.toast('Saved as your defaults for new vaults ✓');
+    }
+    else if (m === 'archive') { if (cur.local) { MV.toast('Local drafts can just be deleted.'); return; } setStatus('archived'); }
+    else if (m === 'delete') {
+      if (!confirm('Delete the vault for ' + (cur.data.merchant.name || 'this merchant') + '? The merchant link stops working. This can’t be undone.')) return;
+      try {
+        if (cur.local) { delete locals[cur.id]; LS.set('mv_local_vaults', locals); }
+        else { await MV.API.remove(cur.id); rows = rows.filter(r => r.id !== cur.id); }
+        clearTimeout(saveT); saveT = null;
+        closeVault(); MV.toast('Vault deleted');
+      } catch (e) { MV.toast('Couldn’t delete: ' + (e.message || e), 4000); }
+    }
+  };
+
+  // ── Activity drawer ──
+  $('actBtn').onclick = () => { const a = $('activity'); a.classList.toggle('open'); if (a.classList.contains('open')) loadActivity(); };
+  $('actClose').onclick = () => $('activity').classList.remove('open');
+  $('actRefresh').onclick = () => loadActivity();
+  async function loadActivity() {
+    const body = $('actBody');
+    if (!cur || cur.local) { body.innerHTML = '<p class="st-note">Activity tracking starts once the vault is saved to the cloud and shared.</p>'; return; }
+    body.innerHTML = '<p class="st-note">Loading…</p>';
+    let ev = [];
+    try { ev = await MV.API.events(cur.id); } catch (e) { body.innerHTML = '<p class="st-note">Couldn’t load activity: ' + esc(e.message || e) + '</p>'; return; }
+    const s = MV.summarize(ev);
+    const ps = MV.planStats(cur.data.plan);
+    const mins = Math.round(s.secs / 60);
+    const lastVisit = (ev.find(e => e.kind === 'visit') || {}).at;
+    let h = '<div class="st-kpis">' +
+      '<div class="st-kpi"><b>' + s.visits + '</b><span>Visits</span></div>' +
+      '<div class="st-kpi"><b>' + s.visitors.length + '</b><span>Visitors</span></div>' +
+      '<div class="st-kpi"><b>' + (mins >= 60 ? Math.floor(mins / 60) + 'h ' + (mins % 60) + 'm' : mins + 'm') + '</b><span>Time</span></div>' +
+      '<div class="st-kpi"><b>' + ps.pct + '%</b><span>Plan</span></div>' +
+      '<div class="st-kpi" style="grid-column:span 2"><b style="font-size:15px">' + (lastVisit ? rel(lastVisit) : 'Not opened yet') + '</b><span>Last visit</span></div></div>';
+    if (s.questions.length) {
+      h += '<div class="st-h">Questions</div>' + s.questions.map(e => {
+        const d = e.detail || {};
+        const mail = d.email ? '<a href="mailto:' + esc(d.email) + '?subject=' + encodeURIComponent('Re: your question in the ShipInsure vault') + '">Reply</a> · ' : '';
+        return '<div class="st-q">' + esc(d.text || d.label) + '<small>' + mail + esc(d.name || e.who || 'Visitor') + ' · ' + rel(e.at) + '</small></div>';
+      }).join('');
+    }
+    if (s.visitors.length) {
+      h += '<div class="st-h">Visitors</div>' + s.visitors.map(v => '<div class="st-vis"><span>' + esc(v.who || 'Anonymous · ' + v.visitor.slice(-4)) + '</span><span>' + v.visits + ' visit' + (v.visits === 1 ? '' : 's') + '</span><span>' + Math.round(v.secs / 60) + 'm</span></div>').join('');
+    }
+    const feed = ev.filter(e => e.kind !== 'time').slice(0, 80);
+    h += '<div class="st-h">Timeline</div>' + (feed.length ? '<ul class="st-feed">' + feed.map(e => '<li><span>' + esc(MV.describe(e)) + (e.who ? '<span class="who">' + esc(e.who) + '</span>' : '') + '</span><small>' + rel(e.at) + '</small></li>').join('') + '</ul>'
+      : '<p class="st-note">No merchant activity yet. Copy the merchant link and send it — visits, deck pages, plan check-offs and questions show up here. Your own team’s visits aren’t counted.</p>');
+    body.innerHTML = h;
+  }
+
+  syncBar();
+  boot();
+})();
+</script>
+</body>
+</html>
