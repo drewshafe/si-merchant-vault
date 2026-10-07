@@ -72,36 +72,70 @@
   const step = (text, owner, extra) => Object.assign({ id: uid('s'), text: text, owner: owner || 'si', done: false, doneAt: '', doneBy: '', due: '', flag: false, link: '' }, extra || {});
   const stage = (name, steps, open) => ({ id: uid('g'), name: name, open: open !== false, steps: steps });
   const PARTNERS = ['DigitalGenius — $200 (AI chat)', 'Faver — $200 (wishlists)', 'Fuego — $200 (mobile app)', 'Gorgias — $100 (help desk)', 'iDrive — $100 (logistics)', 'Passport (Global-e) — $200 (logistics)', 'Richpanel — $100 (help desk)', 'ShipBob — $100 (logistics)', 'Skio — $100 (subscriptions)', 'Stay AI — $100 (subscriptions)', 'Tapcart — $100 (mobile app)', 'Treet — $100 (resell)', 'Hawke Media — $200 for demo session (agency)'];
+  const LIB = () => window.MV_LIB || { install: [], billing: [], examples: [], reviews: [] };
+  const installUrl = platform => { const i = LIB().install; const x = i.find(p => p.key === platform) || i[0]; return x ? x.url : ''; };
   const PLANS = {
-    sales: { label: 'Sales — Discovery → Install', build: () => ({ title: 'Our ShipInsure Action Plan', stages: [
+    sales: { label: 'Sales — Discovery → Install', build: o => ({ title: 'Our ShipInsure Action Plan', stages: [
       stage('Discovery', [step('See product demo & share metrics', 'merchant', { flag: true }), step('Schedule next session', 'si'), step('Review Content: File Share Section', 'merchant')]),
-      stage('Testing / Moving Forward', [step('Install ShipInsure app', 'merchant', { flag: true }), step('Kickoff call with CSM', 'si'), step('Reviewed staging & onboarding completed', 'merchant'), step('Go-live date', 'si')]),
-      stage('See Paid Partner Demos', PARTNERS.map(p => step(p, 'merchant')), false)
+      stage('Testing / Moving Forward', [step('Install ShipInsure app', 'merchant', { flag: true, link: installUrl(o.platform) }), step('Reviewed staging & onboarding completed', 'merchant'), step('Kickoff call with CSM', 'si', { flag: true }), step('Go-Live Date', 'si', { flag: true })]),
+      stage('See Paid Partner Demos - LET ' + (o.repFirst || 'US').toUpperCase() + " KNOW IF YOU'D LIKE AN INTRO!", PARTNERS.map(p => step(p, 'merchant')), false)
     ] }) },
-    vet: { label: 'Vet competitors → Install', build: () => ({ title: 'Next Steps', stages: [
+    vet: { label: 'Vet competitors → Install', build: o => ({ title: 'Next Steps', stages: [
       stage('Vet Competitors', [step('See demos with ShipInsure and others', 'merchant'), step('Compare ROI and features', 'merchant'), step('Make a decision', 'merchant')]),
-      stage('Install', [step('Install ShipInsure app', 'merchant'), step('Staging review', 'si'), step('Go live with ShipInsure', 'si')])
+      stage('Install', [step('Install ShipInsure app', 'merchant', { link: installUrl(o.platform) }), step('Staging review', 'si'), step('Go live with ShipInsure', 'si')])
     ] }) },
-    onboarding: { label: 'Customer onboarding', build: () => ({ title: 'Onboarding Plan', stages: [
+    onboarding: { label: 'Customer onboarding', build: o => ({ title: 'Onboarding Plan', stages: [
       stage('Welcome & tech call', [step('Customer journey walkthrough', 'si'), step('Claim process and policies', 'si'), step('Billing / reimbursement process', 'merchant')]),
       stage('Go live', [step('Portal overview', 'si'), step('3PL / ERP and fulfillment flow', 'merchant'), step('Test order', 'merchant')])
     ] }) },
-    blank: { label: 'Blank plan', build: () => ({ title: 'Our ShipInsure Action Plan', stages: [stage('Next steps', [])] }) }
+    blank: { label: 'Blank plan', build: o => ({ title: 'Our ShipInsure Action Plan', stages: [stage('Next steps', [])] }) }
   };
 
+  // Next Steps buttons. action 'panel' swaps the right-hand panel (the selected one turns gradient);
+  // 'link' opens a URL, 'question' opens the ask box, 'deck' opens the deck full screen.
+  const PANELS = { plan: 'Action plan', roi: 'ROI calculator', install: 'Install ShipInsure', examples: 'Live examples & case studies', billing: 'Billing explained + How a claim works', reviews: 'Merchant reviews' };
+  const DARK_PANELS = { install: 1, examples: 1, billing: 1, reviews: 1 };
   const DEFAULT_BUTTONS = () => [
-    { id: uid('b'), label: 'See Action Plan', action: 'plan', url: '', style: 'gradient' },
-    { id: uid('b'), label: 'ROI', action: 'link', url: '', style: 'roi' },
-    { id: uid('b'), label: 'Install ShipInsure', action: 'link', url: '', style: 'solid' },
-    { id: uid('b'), label: 'Examples / Case Studies', action: 'link', url: '', style: 'outline' },
-    { id: uid('b'), label: 'Billing & Backend Flows', action: 'link', url: '', style: 'outline' },
-    { id: uid('b'), label: 'Merchant Reviews', action: 'link', url: '', style: 'outline' },
+    { id: uid('b'), label: 'See Action Plan', action: 'panel', panel: 'plan', url: '', style: 'solid' },
+    { id: uid('b'), label: 'ROI', action: 'panel', panel: 'roi', url: '', style: 'roi' },
+    { id: uid('b'), label: 'Install ShipInsure', action: 'panel', panel: 'install', url: '', style: 'solid' },
+    { id: uid('b'), label: 'Examples / Case Studies', action: 'panel', panel: 'examples', url: '', style: 'outline' },
+    { id: uid('b'), label: 'Billing & Backend Flows', action: 'panel', panel: 'billing', url: '', style: 'outline' },
+    { id: uid('b'), label: 'Merchant Reviews', action: 'panel', panel: 'reviews', url: '', style: 'outline' },
     { id: uid('b'), label: 'I have a question', action: 'question', url: '', style: 'outline' }
   ];
+
+  // Bring older vault data up to the current shape (safe to run repeatedly).
+  function normalize(v) {
+    if (!v) return v;
+    if (!v.install) v.install = { platform: 'shopify', image: '' };
+    (v.buttons || []).forEach(b => {
+      if (b.action === 'panel') return;
+      const L = String(b.label || '').toLowerCase();
+      let p = null;
+      if (b.action === 'plan') p = 'plan';
+      else if (b.action === 'link' && b.style === 'roi') p = 'roi';
+      else if (b.action === 'link' && !(b.url && b.url.trim())) {
+        if (/install/.test(L)) p = 'install'; else if (/example|case stud/.test(L)) p = 'examples';
+        else if (/billing|backend/.test(L)) p = 'billing'; else if (/review/.test(L)) p = 'reviews';
+      }
+      if (p) { b.action = 'panel'; b.panel = p; if (p === 'plan' && b.style === 'gradient') b.style = 'solid'; }
+    });
+    return v;
+  }
+  const roiButton = v => (v.buttons || []).find(b => b.action === 'panel' && b.panel === 'roi');
+  const buttonAvailable = (b, v) => {
+    if (b.action === 'link') return !!(b.url && b.url.trim());
+    if (b.action === 'panel' && b.panel === 'roi') return !!(b.url && b.url.trim());
+    if (b.action === 'deck') return classify(v.deck || {}).kind !== 'empty';
+    return true;
+  };
 
   function template(o) {
     o = o || {};
     const me = o.rep || 'drew';
+    const rep = REPS.find(r => r.key === me);
+    const platform = o.platform || 'shopify';
     return {
       v: 1,
       merchant: { name: o.merchant || '', logo: o.logo || '', domain: o.domain || '' },
@@ -118,7 +152,8 @@
         { id: uid('d'), label: 'Customer Email → Claim', tag: 'Experience', src: '', kind: '', name: '', download: false }
       ] },
       buttons: DEFAULT_BUTTONS(),
-      plan: (PLANS[o.plan] || PLANS.sales).build(),
+      plan: (PLANS[o.plan] || PLANS.sales).build({ repFirst: rep ? rep.name.split(' ')[0] : '', platform: platform }),
+      install: { platform: platform, image: '' },
       settings: { access: 'link' }
     };
   }
@@ -367,7 +402,9 @@
       (c.kind !== 'empty' ? '<a href="' + esc(c.raw || c.src) + '" target="_blank" rel="noopener">Open in new tab ↗</a>' : '') +
       '<button type="button" data-close>Close ✕</button></div><div class="mv-lightbox-stage"><div class="mv-viewer"></div></div>';
     document.body.appendChild(back);
-    const cleanup = mountViewer(back.querySelector('.mv-viewer'), item, opts);
+    let cleanup = () => {};
+    if (opts.tall) back.querySelector('.mv-lightbox-stage').innerHTML = '<div class="mv-tallimg"><img alt="" src="' + esc(item.src) + '"></div>';
+    else cleanup = mountViewer(back.querySelector('.mv-viewer'), item, opts);
     const onKey = e => { if (e.key === 'Escape') close(); };
     const close = () => { cleanup(); back.remove(); document.removeEventListener('keydown', onKey); };
     back.querySelector('[data-close]').onclick = close;
@@ -380,8 +417,8 @@
   // ctx: { mode:'edit'|'live', canPlan, canTeam, onChange(kind, info), upload(file), track(kind, detail),
   //        who(): {name,email}, editLinks? }
   function render(root, vault, ctx) {
-    const st = root._mv || (root._mv = { design: 0, cleanups: {}, seen: {} });
-    st.vault = vault; st.ctx = ctx;
+    const st = root._mv || (root._mv = { design: 0, panel: (ctx.panel && PANELS[ctx.panel]) ? ctx.panel : 'plan', cleanups: {}, seen: {} });
+    st.vault = normalize(vault); st.ctx = ctx;
     const edit = ctx.mode === 'edit';
     root.innerHTML = '<div class="mv-host"><div class="mv' + (edit ? ' is-edit' : '') + '">' +
       '<header data-part="head"></header>' +
@@ -488,31 +525,130 @@
     }
 
     else if (name === 'steps') {
-      const btns = (v.buttons || []).filter(b => edit || b.action !== 'link' || (b.url && b.url.trim()));
+      const btns = (v.buttons || []).filter(b => edit || buttonAvailable(b, v));
+      if (!btns.some(b => b.action === 'panel' && b.panel === st.panel)) st.panel = 'plan';
       el.className = 'mv-steps';
       el.innerHTML = '<div class="mv-steps-head">Next Steps</div><div class="mv-btns">' +
         btns.map((b, i) => {
           const wide = (i === btns.length - 1 && btns.length % 2 === 1) ? ' is-wide' : '';
-          const unset = edit && b.action === 'link' && !(b.url && b.url.trim()) ? ' is-unset' : '';
+          const unset = edit && !buttonAvailable(b, v) ? ' is-unset' : '';
+          const on = b.action === 'panel' && b.panel === st.panel ? ' is-on' : '';
           const inner = b.style === 'roi' ? '<img alt="ROI" src="' + ASSET('roi-logo.png') + '">' : esc(b.label);
-          const cls = 'mv-btn s-' + (b.style || 'outline') + wide + unset;
+          const cls = 'mv-btn s-' + (b.style || 'outline') + wide + unset + on;
           const ed = edit ? '<span class="mv-btn-edit" data-act="button-edit" data-id="' + b.id + '" title="Edit button">' + IC.pencil + '</span>' : '';
           if (b.action === 'link' && !edit) return '<a class="' + cls + '" href="' + esc(b.url) + '" target="_blank" rel="noopener" data-act="button" data-id="' + b.id + '">' + inner + '</a>';
-          return '<button type="button" class="' + cls + '" data-act="button" data-id="' + b.id + '"' + (unset ? ' title="No link yet — click ✎ to add one"' : '') + '>' + inner + ed + '</button>';
+          return '<button type="button" class="' + cls + '" data-act="button" data-id="' + b.id + '"' + (on ? ' aria-pressed="true"' : '') + (unset ? ' title="Needs a link — click ✎"' : '') + '>' + inner + ed + '</button>';
         }).join('') + '</div>' +
         (edit ? '<div class="mv-btns-add"><button type="button" class="mv-add is-light" data-act="button-add">' + IC.plus + 'Add button</button></div>' : '');
     }
 
     else if (name === 'plan') {
-      const plan = v.plan || { title: '', stages: [] };
-      const s = planStats(plan);
-      el.className = 'mv-plan';
-      el.id = 'mv-plan';
-      el.innerHTML = '<div class="mv-plan-top"><h3>' + ce('plan.title', '', plan.title || 'Our ShipInsure Action Plan', 'Action plan title') + '</h3>' +
-        '<div class="mv-prog"><span>' + s.pct + '%</span><div class="mv-prog-track"><div class="mv-prog-fill" style="width:' + s.pct + '%"></div></div></div></div>' +
-        plan.stages.map((g, gi) => stageHtml(g, gi, plan, v, ctx)).join('') +
-        (edit ? '<button type="button" class="mv-add" data-act="stage-add">' + IC.plus + 'Add stage</button>' : '');
+      // The right-hand Next Steps panel (action plan by default).
+      const P = st.panel || 'plan';
+      el.id = 'mv-panel';
+      el.className = 'mv-panel is-' + P + (DARK_PANELS[P] ? ' is-dark' : '') + (P === 'plan' ? ' mv-plan' : '');
+      el.innerHTML = panelHtml(P, v, ctx, st);
+      const offs = [];
+      el.querySelectorAll('[data-sframe]').forEach(f => offs.push(mountScaled(f)));
+      st.cleanups.plan = () => offs.forEach(f => f());
     }
+  }
+
+  function planHtml(v, ctx) {
+    const edit = ctx.mode === 'edit';
+    const plan = v.plan || { title: '', stages: [] };
+    const s = planStats(plan);
+    const title = edit ? '<span contenteditable="' + CE + '" spellcheck="false" data-edit="plan.title" data-ph="Action plan title">' + esc(plan.title || 'Our ShipInsure Action Plan') + '</span>' : esc(plan.title || 'Our ShipInsure Action Plan');
+    return '<div class="mv-plan-top"><h3>' + title + '</h3>' +
+      '<div class="mv-prog"><span>' + s.pct + '%</span><div class="mv-prog-track"><div class="mv-prog-fill" style="width:' + s.pct + '%"></div></div></div></div>' +
+      plan.stages.map((g, gi) => stageHtml(g, gi, plan, v, ctx)).join('') +
+      (edit ? '<button type="button" class="mv-add" data-act="stage-add">' + IC.plus + 'Add stage</button>' : '');
+  }
+
+  // Scaled live preview of a full web page (renders at desktop width, shrinks to fit).
+  function sframe(url, dw, vh, interactive) {
+    return '<div class="mv-sframe' + (interactive ? ' is-live' : '') + '" data-sframe data-dw="' + dw + '" data-vh="' + (vh || 0) + '">' +
+      '<iframe src="' + esc(url) + '" loading="lazy"' + (interactive ? '' : ' tabindex="-1" aria-hidden="true"') + ' title=""></iframe></div>';
+  }
+  function mountScaled(box) {
+    const fr = box.querySelector('iframe'), dw = +box.dataset.dw || 1200, fixed = +box.dataset.vh || 0;
+    let contentH = 0, alive = true, ro = null, inner = null;
+    const fit = () => {
+      if (!alive) return;
+      const w = box.clientWidth; if (!w) return;
+      // Interactive frames (ROI) use their own phone layout on narrow screens instead of a shrunken desktop.
+      const dwEff = box.classList.contains('is-live') && w < 760 ? w : dw;
+      const k = w / dwEff;
+      const h = fixed || Math.max(420, (contentH || (dwEff < dw ? 1100 : dw * 0.72)) * k);
+      box.style.height = h + 'px';
+      fr.style.width = dwEff + 'px'; fr.style.height = (h / k) + 'px';
+      fr.style.transform = 'scale(' + k + ')';
+    };
+    fr.addEventListener('load', () => {
+      if (fixed) return;
+      try {   // same origin on GitHub Pages → size the frame to the calculator's real height
+        const d = fr.contentDocument; if (!d) return;
+        const measure = () => { const nh = Math.max(d.documentElement.scrollHeight, d.body ? d.body.scrollHeight : 0); if (Math.abs(nh - contentH) > 4) { contentH = nh; fit(); } };
+        measure();
+        if (fr.contentWindow.ResizeObserver && d.body) { inner = new fr.contentWindow.ResizeObserver(measure); inner.observe(d.body); }
+      } catch (e) {}
+    });
+    fit();
+    if (window.ResizeObserver) { ro = new ResizeObserver(fit); ro.observe(box); }
+    return () => { alive = false; if (ro) ro.disconnect(); if (inner) inner.disconnect(); };
+  }
+
+  const libImg = n => ASSET('lib/' + n);
+
+  function panelHtml(P, v, ctx, st) {
+    const edit = ctx.mode === 'edit';
+    const L = LIB();
+    const libNote = edit ? '<p class="mv-pnl-note">Shared library — the same in every vault (vault-library.js).</p>' : '';
+    if (P === 'roi') {
+      const b = roiButton(v);
+      const url = b && b.url && b.url.trim();
+      if (!url) return '<div class="mv-pnl-empty"><img alt="ROI" src="' + ASSET('roi-logo.png') + '"><p>' + (edit ? 'Link this merchant’s ROI calculator — paste their proposal link, or pick their calculator folder in ⋯ → Merchant.' : 'Your ROI breakdown is on its way.') + '</p>' +
+        (edit ? '<button type="button" class="mv-mbtn is-primary" data-act="roi-link">Link ROI calculator</button>' : '') + '</div>';
+      return '<div class="mv-pnl-bar">' + (edit ? '<button type="button" class="mv-chip" data-act="roi-link">' + IC.pencil + '<span>Change ROI link</span></button>' : '') +
+        '<a class="mv-pnl-open" href="' + esc(url) + '" target="_blank" rel="noopener" data-act="panel-open" data-label="ROI calculator">Open full screen ↗</a></div>' +
+        sframe(url, 1180, 0, true);
+    }
+    if (P === 'install') {
+      const plat = (v.install && v.install.platform) || 'shopify';
+      const list = L.install.slice().sort((a, b) => (b.key === plat) - (a.key === plat));
+      const img = v.install && v.install.image;
+      return '<h3 class="mv-pnl-title">Install ShipInsure</h3>' +
+        '<div class="mv-inst-grid">' + list.map(p =>
+          '<div class="mv-inst' + (p.key === plat ? ' is-mine' : '') + '" style="--pc:' + p.color + '">' +
+          (p.key === plat ? '<span class="mv-inst-tag">' + esc(merchantName(v) ? merchantName(v) + '’s platform' : 'Your platform') + '</span>' : '') +
+          '<b>' + esc(p.label) + '</b><a class="mv-inst-go" href="' + esc(p.url) + '" target="_blank" rel="noopener" data-act="panel-open" data-label="Install on ' + esc(p.label) + '">Install on ' + esc(p.label) + ' →</a></div>').join('') + '</div>' +
+        (edit ? '<div class="mv-pnl-tools"><label>Merchant platform <select data-act="install-platform">' + L.install.map(p => '<option value="' + p.key + '"' + (p.key === plat ? ' selected' : '') + '>' + esc(p.label) + '</option>').join('') + '</select></label>' +
+          '<button type="button" class="mv-chip" data-act="install-image">' + IC.image + '<span>' + (img ? 'Replace app screenshot' : 'Add app screenshot') + '</span></button></div>' : '') +
+        (img ? '<div class="mv-inst-shot"><img alt="ShipInsure in your store admin" src="' + esc(img) + '"></div>' :
+          '<ol class="mv-inst-steps"><li><b>Install the app</b><span>Takes a couple of minutes — nothing goes live yet.</span></li><li><b>Kickoff with your CSM</b><span>We set up protection, branding and claims on staging with you.</span></li><li><b>Review staging, then go live</b><span>You approve everything before shoppers see it.</span></li></ol>');
+    }
+    if (P === 'examples') {
+      return '<h3 class="mv-pnl-title">Live Examples &amp; Case Studies</h3>' + libNote + '<div class="mv-ex-list">' + L.examples.map((x, i) =>
+        '<div class="mv-ex"><div class="mv-ex-main">' +
+        '<div class="mv-ex-logo">' + (x.logo ? '<img alt="' + esc(x.name) + '" title="' + esc(x.name) + '" src="' + esc(libImg(x.logo)) + '">' : '<span>' + esc(x.name) + '</span>') + '</div>' +
+        '<div class="mv-ex-setup"><b>' + esc(x.setup) + '</b>' + (x.note ? '<small>' + esc(x.note) + '</small>' : '') + '</div>' +
+        '<a class="mv-ex-store" href="' + esc(x.url) + '" target="_blank" rel="noopener" data-act="panel-open" data-label="Live store: ' + esc(x.name) + '">View Live Store</a></div>' +
+        (x.cs ? '<button type="button" class="mv-ex-cs" data-act="cs-view" data-i="' + i + '" title="' + esc(x.csText || '') + '" style="background-image:url(\'' + esc(libImg(x.cs)) + '\')"><span class="mv-ex-cs-btn">View Case Study</span></button>' : '') +
+        '</div>').join('') + '</div>';
+    }
+    if (P === 'billing') {
+      return L.billing.map(x => '<h3 class="mv-pnl-title">' + esc(x.label) + '</h3>' +
+        '<a class="mv-teaser" href="' + esc(x.url) + '" target="_blank" rel="noopener" data-act="panel-open" data-label="' + esc(x.label) + '">' + sframe(x.url, 1280, 300, false) +
+        '<span class="mv-teaser-cta">Open ' + esc(x.label) + ' ↗</span></a>').join('');
+    }
+    if (P === 'reviews') {
+      const all = L.reviews, n = st.reviewsAll ? all.length : Math.min(6, all.length);
+      return '<h3 class="mv-pnl-title">Merchant Reviews</h3>' + libNote + '<div class="mv-rev-list">' + all.slice(0, n).map(r =>
+        '<div class="mv-rev"><div class="mv-rev-logo">' + (r.logo ? '<img alt="' + esc(r.name) + '" src="' + esc(libImg(r.logo)) + '">' : '<span>' + esc(r.name) + '</span>') + '</div>' +
+        '<div class="mv-rev-body"><b>' + esc(r.name) + '</b><p>' + esc(r.quote) + '</p><span class="mv-rev-rate">―5/5 <i>★★★★★</i> rating from ' + esc(r.name) + '</span></div></div>').join('') +
+        (n < all.length ? '<button type="button" class="mv-rev-more" data-act="reviews-more">Show all ' + all.length + ' reviews</button>' : '') + '</div>';
+    }
+    return planHtml(v, ctx);
   }
 
   function emptyPrompt(act, text, i) {
@@ -620,7 +756,7 @@
       else set(v, path, path === 'welcome.body' ? val : val.replace(/\n/g, ' '));
       if (path === 'merchant.name') {
         const mono = root.querySelector('.mv-merchant-logo .mv-monogram'); if (mono) mono.textContent = val.trim() ? initials(val) : '+';
-        part(root, 'team'); part(root, 'plan');
+        part(root, 'team'); if (st.panel === 'plan' || st.panel === 'install') part(root, 'plan');
       }
       if (st.ctx.onChange) st.ctx.onChange('text', { path: path });
     });
@@ -639,6 +775,7 @@
       const st = root._mv, v = st.vault, edit = st.ctx.mode === 'edit';
       const t = e.target;
       if (t.dataset.act === 'meeting') { v.meeting = t.value; changed('meeting', {}, ['head']); }
+      else if (t.dataset.act === 'install-platform') { v.install.platform = t.value; changed('install', {}, ['plan']); }
       else if (t.dataset.act === 'step-date') {
         const id = t.closest('[data-step]').dataset.step;
         const op = { op: 'date', id: id, due: t.value };
@@ -775,20 +912,22 @@
         const b = act === 'button-edit' ? list.find(x => x.id === a.dataset.id) : null;
         const r = await form({ title: b ? 'Edit button' : 'Add a button', fields: [
           { key: 'label', label: 'Label', required: true, placeholder: 'Install ShipInsure' },
-          { key: 'action', label: 'When clicked', type: 'select', options: [['link', 'Open a link'], ['plan', 'Scroll to the action plan'], ['question', 'Open “I have a question”'], ['deck', 'Open the demo deck full screen']] },
-          { key: 'url', label: 'Link (for “Open a link”)', type: 'url', placeholder: 'https://…' },
-          { key: 'style', label: 'Style', type: 'select', options: [['outline', 'Outline (white)'], ['solid', 'Solid (periwinkle)'], ['gradient', 'Gradient (primary)'], ['roi', 'ROI logo']] },
+          { key: 'action', label: 'When clicked', type: 'select', options: Object.keys(PANELS).map(k => ['panel:' + k, 'Show panel — ' + PANELS[k]]).concat([['link', 'Open a link (new tab)'], ['question', 'Open “I have a question”'], ['deck', 'Open the demo deck full screen']]) },
+          { key: 'url', label: 'Link (for “Open a link” and the ROI panel)', type: 'url', placeholder: 'https://…' },
+          { key: 'style', label: 'Style (the selected panel button always turns gradient)', type: 'select', options: [['outline', 'Outline (white)'], ['solid', 'Solid (periwinkle)'], ['gradient', 'Gradient'], ['roi', 'ROI logo']] },
           { key: 'pos', label: 'Position', type: 'select', options: list.map((x, i) => [String(i), (i + 1) + '. ' + x.label]).concat(b ? [] : [[String(list.length), (list.length + 1) + '. (end)']]) }
-        ], values: b ? Object.assign({}, b, { pos: String(list.indexOf(b)) }) : { action: 'link', style: 'outline', pos: String(list.length) }, danger: b ? 'Remove' : null, submit: b ? 'Save' : 'Add' });
+        ], values: b ? Object.assign({}, b, { pos: String(list.indexOf(b)), action: b.action === 'panel' ? 'panel:' + b.panel : b.action }) : { action: 'link', style: 'outline', pos: String(list.length) }, danger: b ? 'Remove' : null, submit: b ? 'Save' : 'Add' });
         if (!r) return;
         if (r === '__delete') list.splice(list.indexOf(b), 1);
         else {
           const tgt = b || { id: uid('b') };
-          Object.assign(tgt, { label: r.label, action: r.action, url: r.url, style: r.style });
+          const isPanel = r.action.indexOf('panel:') === 0;
+          Object.assign(tgt, { label: r.label, action: isPanel ? 'panel' : r.action, url: r.url, style: r.style });
+          if (isPanel) tgt.panel = r.action.slice(6); else delete tgt.panel;
           if (b) list.splice(list.indexOf(b), 1);
           list.splice(Math.min(+r.pos, list.length), 0, tgt);
         }
-        changed('buttons', {}, ['steps']);
+        changed('buttons', {}, ['steps', 'plan']);
       }
       else if (act === 'button') {
         const b = v.buttons.find(x => x.id === a.dataset.id); if (!b) return;
@@ -799,9 +938,33 @@
           return; // anchor navigates
         }
         track(root, 'click', { label: b.label });
-        if (b.action === 'plan') { const p = root.querySelector('#mv-plan'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        if (b.action === 'panel') {
+          st.panel = b.panel; part(root, 'steps'); part(root, 'plan');
+          const host = root.querySelector('.mv-host');
+          if (host && host.clientWidth < 900) { const p = root.querySelector('#mv-panel'); if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+        }
         else if (b.action === 'deck') { const d = root.querySelector('[data-act="view"][data-which="deck"]'); if (d) d.click(); }
         else if (b.action === 'question') ask(root);
+      }
+      else if (act === 'panel-open') { track(root, 'click', { label: a.dataset.label || 'Link' }); }
+      else if (act === 'reviews-more') { st.reviewsAll = true; part(root, 'plan'); track(root, 'click', { label: 'Show all reviews' }); }
+      else if (act === 'cs-view') {
+        const x = LIB().examples[+a.dataset.i]; if (!x) return;
+        track(root, 'open', { what: 'case study', label: 'Case study: ' + x.name });
+        lightbox({ label: x.name + ' — case study', src: libImg(x.cs), kind: 'image', download: false }, { tall: true });
+      }
+      else if (act === 'roi-link' && edit) {
+        const b = roiButton(v); if (!b) return;
+        const r = await form({ title: 'ROI calculator', text: 'Paste the merchant’s proposal link from the ROI calculator (☁ Cloud Save → merchant link). It shows inside the ROI panel.', fields: [{ key: 'url', label: 'Proposal link', type: 'url', placeholder: 'https://drewshafe.github.io/si-roi-calculator/proposal.html?id=…' }], values: { url: b.url || '' }, danger: b.url ? 'Unlink' : null });
+        if (!r) return;
+        b.url = r === '__delete' ? '' : r.url;
+        changed('buttons', {}, ['steps', 'plan']);
+      }
+      else if (act === 'install-image' && edit) {
+        const r = await form({ title: 'App screenshot', text: 'Screenshot of ShipInsure inside the store admin — shows under the install buttons.', fields: [{ key: 'image', label: 'Image', type: 'file', accept: 'image/*', upload: ctx.upload }], values: { image: v.install.image || '' }, danger: v.install.image ? 'Remove' : null });
+        if (!r) return;
+        v.install.image = r === '__delete' ? '' : r.image;
+        changed('install', {}, ['plan']);
       }
 
       // ── plan ──
@@ -1052,7 +1215,7 @@
   window.MV = {
     BASE, ASSET, SB_URL, SB_KEY, IC, REPS, PLANS, DEFAULT_AVATAR,
     esc, uid, clone, fmtShort, fmtMeeting, todayISO, initials, photoSrc,
-    template, withDefaults, person, repPerson, planStats, applyPlanOp, findStep, mergeMerchant,
+    template, withDefaults, normalize, person, repPerson, planStats, applyPlanOp, findStep, mergeMerchant, PANELS,
     classify, embedUrl, downloadHref, mountViewer, render, part, form, lightbox, toast,
     API, engagement, summarize, describe
   };

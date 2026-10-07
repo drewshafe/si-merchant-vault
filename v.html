@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Lexend+Deca:wght@400;500&display=swap">
-<link rel="stylesheet" href="vault.css?v=20261006a">
+<link rel="stylesheet" href="vault.css?v=20261007a">
 <style>
   html, body { margin: 0; background: #fff; }
   .splash { min-height: 100vh; display: grid; place-items: center; text-align: center; font-family: "Montserrat", system-ui, sans-serif; color: #4a4d66; padding: 24px; }
@@ -29,7 +29,8 @@
 <body>
 <div id="app"><div class="splash"><div><img class="spin" src="assets/vault-icon.png" alt=""><h1>Opening your vault…</h1></div></div></div>
 <script src="https://drewshafe.github.io/si-roi-calculator/sb.js"></script>
-<script src="vault-core.js?v=20261006a"></script>
+<script src="vault-library.js?v=20261007a"></script>
+<script src="vault-core.js?v=20261007a"></script>
 <script>
 (function () {
   const app = document.getElementById('app');
@@ -71,7 +72,7 @@
           const plan = (fresh && fresh.data && fresh.data.plan) || vault.plan;
           if (plan !== vault.plan) MV.applyPlanOp(plan, info.op);
           await MV.API.merchantSave(id, key, { plan: plan }, info.label);
-          if (plan !== vault.plan) { vault.plan = plan; MV.part(root, 'plan'); }
+          if (plan !== vault.plan) { vault.plan = plan; if (root._mv && root._mv.panel === 'plan') MV.part(root, 'plan'); }
           track('plan', { label: info.label });
         } else if (kind === 'team') {
           await MV.API.merchantSave(id, key, { teamMerchant: vault.team.merchant }, info.label);
@@ -119,7 +120,7 @@
     app.innerHTML = (isTeam ? '<div class="team-bar">Team preview — <b>this is what ' + MV.esc(m || 'the merchant') + ' sees</b>. Not tracked; plan checkboxes are live for the merchant only.</div>' : '') + '<div id="vault"></div>';
     const root = document.getElementById('vault');
     MV.render(root, vault, {
-      mode: 'live', canPlan: editable, canTeam: editable,
+      mode: 'live', canPlan: editable, canTeam: editable, panel: q.get('p') || '',
       who: () => who || {},
       setWho: w => { who = w; store.set('mv_who', JSON.stringify(w)); },
       track: track,

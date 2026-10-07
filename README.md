@@ -2,13 +2,14 @@
 
 ShipInsure's in-house deal rooms. Lives in the Rep Hub as the **Merchant Vault** tab.
 
-Each merchant gets one link with their deck, checkout designs, both teams, Next Steps buttons and a shared action plan. Merchants can check off steps, add steps and add their own team. Reps see visits, deck pages read, clicks, plan changes and questions.
+Each merchant gets one link with their deck, checkout designs and both teams, plus a Next Steps area. Each Next Steps button swaps the panel beside it: Action Plan, ROI calculator, Install, Live Examples & Case Studies, Billing + Claims, or Merchant Reviews. Add `&p=reviews` (or `roi`, `install`, `examples`, `billing`) to a merchant link to open straight to that panel. Merchants can check off steps, add steps and add their own team. Reps see visits, deck pages read, clicks, plan changes and questions.
 
 | File | What it is |
 |---|---|
 | `index.html` | Rep studio: vault list, inline editor (autosaves), Copy merchant link, Activity panel |
 | `v.html` | Merchant view: `v.html?id=<vault>&k=<edit key>` |
 | `vault-core.js` | Shared renderer, PDF viewer (PDF.js), modals, Supabase data layer |
+| `vault-library.js` | Shared Next Steps content (reviews, live examples + case studies, install links, billing/claims pages). Same in every vault |
 | `vault.css` | Room layout, built from the "MERCHANT VAULT – 1" mock |
 | `vault-schema.sql` | Supabase tables, RPCs and storage bucket. Run it once in the SQL editor |
 

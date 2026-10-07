@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700&family=Lexend+Deca:wght@400;500&display=swap">
-<link rel="stylesheet" href="vault.css?v=20261006a">
+<link rel="stylesheet" href="vault.css?v=20261007a">
 <style>
   :root {
     --st-rail: #12131f; --st-rail-2: #1b1c2c; --st-rail-line: rgba(255,255,255,.08); --st-rail-ink: #e9eaf5; --st-rail-muted: #8d90ab;
@@ -176,7 +176,8 @@
 </div>
 
 <script src="https://drewshafe.github.io/si-roi-calculator/sb.js"></script>
-<script src="vault-core.js?v=20261006a"></script>
+<script src="vault-library.js?v=20261007a"></script>
+<script src="vault-core.js?v=20261007a"></script>
 <script>
 (function () {
   'use strict';
@@ -404,7 +405,7 @@
       if (srv.updated_at !== c.syncedAt && srv.updated_by === 'merchant') {
         const dirty = (rootRef._mv && rootRef._mv.dirty) || {};
         MV.mergeMerchant(d, srv.data, dirty);
-        if (c === cur) { MV.part(rootRef, 'plan'); MV.part(rootRef, 'team'); }
+        if (c === cur) { if (rootRef._mv && rootRef._mv.panel === 'plan') MV.part(rootRef, 'plan'); MV.part(rootRef, 'team'); }
       }
       const res = await MV.API.update(c.id, { data: d, merchant: d.merchant.name || '', title: 'ShipInsure <> ' + (d.merchant.name || ''), merchant_ref: d.merchant.ref || null });
       c.syncedAt = res.updated_at;
@@ -442,9 +443,10 @@
         merchants.length ? { key: 'folder', label: 'Calculator folder (logo + ROI link)', type: 'select', options: [['', '— none —']].concat(merchants.map(m => [m.id, m.name])),
           fill: id => { const m = merchants.find(x => x.id === id); return m ? { merchant: m.name } : null; } } : null,
         { key: 'meeting', label: 'Next meeting', type: 'date' },
+        { key: 'platform', label: 'Platform', type: 'select', options: (window.MV_LIB ? MV_LIB.install : []).map(p => [p.key, p.label]) },
         copyFrom ? null : { key: 'plan', label: 'Action plan', type: 'select', options: plans }
       ].filter(Boolean),
-      values: { plan: 'sales' }, submit: copyFrom ? 'Duplicate' : 'Create vault'
+      values: { plan: 'sales', platform: (copyFrom && copyFrom.install && copyFrom.install.platform) || 'shopify' }, submit: copyFrom ? 'Duplicate' : 'Create vault'
     });
     if (!r) return;
     let data;
@@ -455,8 +457,9 @@
       data.plan.stages.forEach(g => { g.steps = g.steps.filter(s => !s.by); g.steps.forEach(s => { s.id = MV.uid('s'); s.done = false; s.doneAt = ''; s.doneBy = ''; s.due = ''; }); });
       data.buttons.forEach(b => { if (b.style === 'roi') b.url = ''; });
       data.meeting = r.meeting || '';
+      data.install = Object.assign({}, data.install, { platform: r.platform || 'shopify' });
     } else {
-      data = MV.withDefaults(MV.template({ merchant: r.merchant, meeting: r.meeting, plan: r.plan, rep: myRepKey() }), LS.get('mv_defaults', null));
+      data = MV.withDefaults(MV.template({ merchant: r.merchant, meeting: r.meeting, plan: r.plan, platform: r.platform, rep: myRepKey() }), LS.get('mv_defaults', null));
     }
     if (r.folder) await applyFolder(data, r.folder);
     await createVault(data);
