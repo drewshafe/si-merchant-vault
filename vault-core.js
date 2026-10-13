@@ -121,6 +121,11 @@
       }
       if (p) { b.action = 'panel'; b.panel = p; if (p === 'plan' && b.style === 'gradient') b.style = 'solid'; }
     });
+    // Action Plan is the first and default Next Steps button — move it to the front if an
+    // older vault (or saved mv_defaults) had another button (e.g. ROI) ahead of it.
+    const _bs = v.buttons || [];
+    const _pi = _bs.findIndex(b => b.action === 'panel' && b.panel === 'plan');
+    if (_pi > 0) _bs.unshift(_bs.splice(_pi, 1)[0]);
     return v;
   }
   const roiButton = v => (v.buttons || []).find(b => b.action === 'panel' && b.panel === 'roi');
@@ -958,7 +963,7 @@
       }
       else if (act === 'roi-link' && edit) {
         const b = roiButton(v); if (!b) return;
-        const r = await form({ title: 'ROI calculator', text: 'Paste the merchant’s proposal link from the ROI calculator (☁ Cloud Save → merchant link). It shows inside the ROI panel.', fields: [{ key: 'url', label: 'Proposal link', type: 'url', placeholder: 'https://drewshafe.github.io/si-roi-calculator/proposal.html?id=…' }], values: { url: b.url || '' }, danger: b.url ? 'Unlink' : null });
+        const r = await form({ title: 'ROI calculator', text: 'Paste the merchant’s proposal link from the ROI calculator. For multiple coverage options, use the hub’s Cloud Folders → “Copy options link” (a ?ids=… link that shows all options as tabs). A single ?id=… proposal link works too. It shows inside the ROI panel.', fields: [{ key: 'url', label: 'Proposal / options link', type: 'url', placeholder: 'https://drewshafe.github.io/si-roi-calculator/proposal.html?ids=…' }], values: { url: b.url || '' }, danger: b.url ? 'Unlink' : null });
         if (!r) return;
         b.url = r === '__delete' ? '' : r.url;
         changed('buttons', {}, ['steps', 'plan']);

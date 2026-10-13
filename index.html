@@ -177,7 +177,7 @@
 
 <script src="https://drewshafe.github.io/si-roi-calculator/sb.js"></script>
 <script src="vault-library.js?v=20261007c"></script>
-<script src="vault-core.js?v=20261007c"></script>
+<script src="vault-core.js?v=20261013a"></script>
 <script>
 (function () {
   'use strict';
@@ -472,7 +472,14 @@
       const cfgs = (await SIsb.listConfigs()).filter(c => c.merchant_ref === m.id || (c.merchant || '').toLowerCase() === m.name.toLowerCase());
       if (cfgs.length) {
         const roi = data.buttons.find(b => b.style === 'roi');
-        if (roi && !roi.url) roi.url = CALC + 'proposal.html?id=' + cfgs[0].id;
+        if (roi && !roi.url) {
+          // Auto-suggest the merchant's OPTIONS link: all their saved scenarios as tabs
+          // (proposal.html?ids=…) so the ROI panel shows every coverage option, not just
+          // one. The rep can curate/reorder in the hub (Cloud Folders → Copy options link)
+          // and paste the result via ⋯ → Change ROI link.
+          const ids = cfgs.map(c => c.id);
+          roi.url = CALC + 'proposal.html?' + (ids.length > 1 ? 'ids=' + ids.join(',') : 'id=' + ids[0]);
+        }
       }
     } catch (e) {}
   }
