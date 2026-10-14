@@ -434,6 +434,10 @@
 .mv-empty-cta svg { width: calc(2.6 * var(--u)); height: calc(2.6 * var(--u)); opacity: .85; }
 .mv-empty-cta span { max-width: calc(26 * var(--u)); opacity: .95; }
 .mv-empty-cta:hover { background: rgba(255,255,255,.08); }
+.mv-empty-stack { position: absolute; inset: 0; }
+.mv-empty-stack .mv-empty-cta { padding-bottom: calc(4 * var(--u)); }
+.mv-exp-cta { position: absolute; left: 50%; bottom: calc(1.4 * var(--u)); transform: translateX(-50%); z-index: 1; white-space: nowrap; font: inherit; font-family: var(--mv-display); font-weight: 700; font-size: calc(.62 * var(--u)); color: #1b1d2e; background: #fff; border: 0; border-radius: 30px; padding: calc(.45 * var(--u)) calc(1 * var(--u)); cursor: pointer; box-shadow: 0 4px 14px rgba(10,12,40,.25); }
+.mv-exp-cta:hover { filter: brightness(.96); }
 .mv-btn-edit {
   position: absolute; top: -9px; right: -9px; width: 24px; height: 24px; border-radius: 50%; background: #111; color: #fff;
   display: grid; place-items: center; opacity: 0; transition: opacity .12s; box-shadow: 0 2px 8px rgba(0,0,0,.3);

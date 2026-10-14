@@ -524,7 +524,10 @@
         (edit ? '<button type="button" class="mv-add mv-add-pill" data-act="design-add">' + IC.plus + 'Add</button>' : '') + '</div></div>' +
         '<div class="mv-frame"><div class="mv-viewer" data-viewer="design"></div></div>';
       st.cleanups.designs = mountViewer(el.querySelector('[data-viewer]'), cur || {}, {
-        emptyHtml: edit ? emptyPrompt('design-edit', 'Upload a mockup (PDF / image) or paste a Widget Designer, Email, Claim Wizard or Figma link', st.design) : '',
+        emptyHtml: !edit ? '' : isExperience(cur)
+          ? '<div class="mv-empty-stack">' + emptyPrompt('design-edit', 'Paste a Customer Email → Claim experience link, or upload a mockup', st.design) +
+            '<button type="button" class="mv-exp-cta" data-act="design-exp" data-i="' + st.design + '">⚡ Use my latest Email Automation + Claim Wizard designs</button></div>'
+          : emptyPrompt('design-edit', 'Upload a mockup (PDF / image) or paste a Widget Designer, Email, Claim Wizard or Figma link', st.design),
         onPage: (n, total) => cur && track(root, 'page', { what: 'design', page: n, pages: total, label: cur.label })
       });
     }
@@ -658,6 +661,15 @@
     }
     return planHtml(v, ctx);
   }
+
+  // Customer Email → Claim: Email Automation + Claim Wizard save the rep's latest designs in this
+  // browser (same origin), so a design slot can be filled with the combined experience in one click.
+  function experienceFromTools() {
+    let e = '', c = '';
+    try { e = localStorage.getItem('si_exp_email') || ''; c = localStorage.getItem('si_exp_claim') || ''; } catch (x) {}
+    return location.origin + '/si-claim-wizard/experience.html#e=' + e + '&c=' + c;
+  }
+  const isExperience = it => !!it && /email|claim/i.test((it.label || '') + ' ' + (it.tag || ''));
 
   function emptyPrompt(act, text, i) {
     return '<button type="button" class="mv-empty-cta" data-act="' + act + '"' + (i != null ? ' data-i="' + i + '"' : '') + '>' + IC.image + '<span>' + esc(text) + '</span></button>';
@@ -875,7 +887,7 @@
         const items = v.designs.items;
         const i = act === 'design-edit' ? +a.dataset.i : -1;
         const it = i >= 0 ? items[i] : null;
-        const r = await form({ title: it ? 'Edit design' : 'Add a design', text: 'Upload a mockup PDF or image, or paste a link — Checkout Experience (Widget Designer), Email Automation, Claim Wizard, Figma or Canva.', fields: [
+        const r = await form({ title: it ? 'Edit design' : 'Add a design', text: 'Upload a mockup PDF or image, or paste a link — Checkout Experience (Widget Designer), Email Automation, Claim Wizard, a Customer Email → Claim experience, Figma or Canva.', fields: [
           { key: 'label', label: 'Label', placeholder: 'Cart & Checkout', required: true },
           { key: 'tag', label: 'Tag', placeholder: 'Mockups' },
           { key: 'src', label: 'File or link', type: 'file', accept: 'application/pdf,image/*', upload: ctx.upload },
@@ -889,6 +901,13 @@
           Object.assign(tgt, { label: r.label, tag: r.tag, src: r.src, download: r.download });
           if (!it) { items.push(tgt); st.design = items.length - 1; }
         }
+        changed('designs', {}, ['designs']);
+      }
+      else if (act === 'design-exp') {
+        e.stopPropagation();
+        const it = v.designs.items[+a.dataset.i];
+        if (!it) return;
+        Object.assign(it, { src: experienceFromTools(), kind: '', name: '', download: false });
         changed('designs', {}, ['designs']);
       }
       else if (act === 'design-pick') {
