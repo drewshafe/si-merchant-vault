@@ -255,7 +255,35 @@
     } else if (!user) {
       b.innerHTML = '<div class="st-banner">Not signed in — new vaults save as local drafts in this browser. <a href="#" id="bannerSignIn">Sign in</a> to save to the cloud and get a merchant link.</div>';
       const a = $('bannerSignIn'); if (a) a.onclick = e => { e.preventDefault(); signIn(); };
+    } else if (user && cloud && Object.keys(locals).length) {
+      // Drafts made while signed out live only in this browser — offer to move them to the cloud.
+      const n = Object.keys(locals).length;
+      b.innerHTML = '<div class="st-banner">' + n + ' local draft' + (n === 1 ? '' : 's') + ' only exist' + (n === 1 ? 's' : '') + ' in this browser. <a href="#" id="bannerPublish">☁ Publish ' + (n === 1 ? 'it' : 'all') + ' to the cloud</a> to share with your team and get merchant links.</div>';
+      const a = $('bannerPublish'); if (a) a.onclick = async e => { e.preventDefault(); await publishAll(); };
     } else b.innerHTML = '';
+  }
+
+  // Move a local draft into the cloud (keeps everything, then removes the local copy).
+  async function publishLocal(id) {
+    const l = locals[id]; if (!l) return null;
+    if (cur && cur.id === id) await flushSave();
+    const d = (cur && cur.id === id) ? cur.data : l.data;
+    const row = await MV.API.create({ merchant: d.merchant.name || '', title: 'ShipInsure <> ' + (d.merchant.name || ''), data: d, merchant_ref: d.merchant.ref || null, status: l.status || 'draft' });
+    rows.unshift(Object.assign({}, row, { plan: d.plan, logo: d.merchant.logo }));
+    delete locals[id]; LS.set('mv_local_vaults', locals);
+    if (LS.get('mv_last', null) === id) LS.set('mv_last', row.id);
+    return row;
+  }
+  async function publishAll() {
+    const ids = Object.keys(locals), wasOpen = cur && cur.local ? cur.id : null;
+    let ok = 0, newOpen = null;
+    for (const id of ids) {
+      try { const row = await publishLocal(id); if (row) { ok++; if (id === wasOpen) newOpen = row.id; } }
+      catch (e) { MV.toast('Couldn’t publish “' + ((locals[id] && locals[id].data.merchant.name) || id) + '”: ' + (e.message || e), 4500); }
+    }
+    renderBanner(); renderList();
+    if (newOpen) { cur = null; await open(newOpen); }
+    if (ok) MV.toast('☁ Published ' + ok + ' vault' + (ok === 1 ? '' : 's') + ' to the cloud ✓');
   }
 
   // ── List ──
@@ -530,7 +558,13 @@
   window.mvMerchantLink = merchantLink;   // Rep Hub's "Copy Link" uses this (same origin)
   $('copyBtn').onclick = async () => {
     if (!cur) return;
-    if (cur.local) { MV.toast(user ? 'Cloud tables aren’t set up yet — run vault-schema.sql to get links.' : 'Sign in to save this vault to the cloud and get a merchant link.', 4000); return; }
+    if (cur.local) {
+      if (!user) { MV.toast('Sign in first — then this draft publishes to the cloud and you get a merchant link.', 4500); signIn(); return; }
+      if (!cloud) { MV.toast('Cloud tables aren’t reachable right now — try again in a moment.', 4000); return; }
+      // Signed in: publish this local draft to the cloud, then hand back its merchant link.
+      try { const row = await publishLocal(cur.id); cur = null; await open(row.id); renderBanner(); renderList(); }
+      catch (e) { MV.toast('Couldn’t publish: ' + (e.message || e), 4500); return; }
+    }
     await flushSave();
     const link = merchantLink();
     try { await navigator.clipboard.writeText(link); MV.toast('Merchant link copied ✓'); }
