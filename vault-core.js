@@ -482,7 +482,11 @@
   // ctx: { mode:'edit'|'live', canPlan, canTeam, onChange(kind, info), upload(file), track(kind, detail),
   //        who(): {name,email}, editLinks? }
   function render(root, vault, ctx) {
-    const st = root._mv || (root._mv = { design: 0, panel: (ctx.panel && PANELS[ctx.panel]) ? ctx.panel : 'plan', cleanups: {}, seen: {} });
+    // Default view = ROI (first + default button). A deep-linked panel wins; if no ROI
+    // link is set yet, fall back to the Action Plan so we never open on an empty ROI panel.
+    const _rb = roiButton(vault);
+    const _defPanel = (ctx.panel && PANELS[ctx.panel]) ? ctx.panel : ((_rb && buttonAvailable(_rb, vault)) ? 'roi' : 'plan');
+    const st = root._mv || (root._mv = { design: 0, panel: _defPanel, cleanups: {}, seen: {} });
     st.vault = normalize(vault); st.ctx = ctx;
     const edit = ctx.mode === 'edit';
     root.innerHTML = '<div class="mv-host"><div class="mv' + (edit ? ' is-edit' : '') + '">' +
