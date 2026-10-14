@@ -96,6 +96,7 @@
     trash: P('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>'),
     ext: P('<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/>'),
     image: P('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/>'),
+    grid: P('<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="18" height="8" rx="1.5"/>'),
     dots: P('<circle cx="5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="19" cy="12" r="1.3" fill="currentColor"/>'),
     up: P('<path d="M6 15l6-6 6 6"/>'), dn: P('<path d="M6 9l6 6 6-6"/>')
   };
@@ -139,7 +140,8 @@
   // Next Steps buttons. action 'panel' swaps the right-hand panel (the selected one turns gradient);
   // 'link' opens a URL, 'question' opens the ask box, 'deck' opens the deck full screen.
   const PANELS = { plan: 'Action plan', roi: 'ROI calculator', install: 'Install ShipInsure', examples: 'Live examples & case studies', billing: 'Billing explained + How a claim works', reviews: 'Merchant reviews', calendar: 'Calendar (book a meeting)' };
-  const DEFAULT_CALENDAR = 'https://calendly.com/drew-shipinsure/100-demo';
+  const DEFAULT_CALENDAR = 'https://calendly.com/drew-shipinsure/30min';   // "ShipInsure Meeting"
+  const OLD_CALENDAR = /calendly\.com\/drew-shipinsure\/100-demo/i;
   const DARK_PANELS = { install: 1, examples: 1, billing: 1, reviews: 1 };
   const DEFAULT_BUTTONS = () => [
     { id: uid('b'), label: 'ROI', action: 'panel', panel: 'roi', url: '', style: 'roi' },
@@ -169,6 +171,9 @@
       if (p) { b.action = 'panel'; b.panel = p; if (p === 'plan' && b.style === 'gradient') b.style = 'solid'; }
     });
     const _bs = v.buttons || [];
+    _bs.forEach(b => { if (b.panel === 'calendar' && OLD_CALENDAR.test(b.url || '')) b.url = DEFAULT_CALENDAR; });
+    // Rep-chosen hero layout: Deck / Designs & Flows sizing and where Our Team sits.
+    v.layout = Object.assign({ media: 'split', team: 'top' }, v.layout || {});
     // Calendar joins every vault once, just ahead of "I have a question" (reps can remove it after).
     if (!v.calendarSeeded) {
       v.calendarSeeded = true;
@@ -482,14 +487,23 @@
     const edit = ctx.mode === 'edit';
     root.innerHTML = '<div class="mv-host"><div class="mv' + (edit ? ' is-edit' : '') + '">' +
       '<header data-part="head"></header>' +
-      '<section class="mv-hero"><div data-part="welcome"></div><div data-part="team" class="mv-team-wrap"></div><div data-part="deck" class="mv-sec is-deck"></div><div data-part="designs" class="mv-sec is-designs"></div></section>' +
+      '<section class="mv-hero">' + (edit ? '<button type="button" class="mv-chip mv-layout-chip" data-act="layout" title="Resize Deck / Designs & Flows, move or hide Our Team">' + IC.grid + '<span>Layout</span></button>' : '') + '<div data-part="welcome"></div><div data-part="team" class="mv-team-wrap"></div><div data-part="deck" class="mv-sec is-deck"></div><div data-part="designs" class="mv-sec is-designs"></div></section>' +
       '<section class="mv-bottom"><div data-part="steps"></div><div data-part="plan"></div></section>' +
       '</div></div>';
+    applyLayout(root);
     ['head', 'welcome', 'team', 'deck', 'designs', 'steps', 'plan'].forEach(p => part(root, p));
     if (!root._mvBound) { bind(root); root._mvBound = true; }
     if (!root._mvFaces) { root._mvFaces = new MutationObserver(() => hydrateAvatars(root)); root._mvFaces.observe(root, { childList: true, subtree: true }); }
     hydrateAvatars(root);
     if (!edit) observeSections(root);
+  }
+
+  const LAYOUT_MEDIA = [['split', 'Equal — Demo Deck and Designs & Flows side by side'], ['deck', 'Bigger Demo Deck'], ['designs', 'Bigger Designs & Flows'], ['stacked', 'Both full width (largest), stacked']];
+  const LAYOUT_TEAM = [['top', 'Top — beside the welcome'], ['bottom', 'Bottom — below Deck / Designs & Flows'], ['hidden', 'Hidden']];
+  function applyLayout(root) {
+    const hero = root.querySelector('.mv-hero'), L = (root._mv.vault.layout) || {};
+    if (!hero) return;
+    hero.className = 'mv-hero lay-' + (L.media || 'split') + ' team-' + (L.team || 'top');
   }
 
   const v_ = root => root._mv.vault;
@@ -986,6 +1000,18 @@
           if (!it) { items.push(tgt); st.design = items.length - 1; }
         }
         changed('designs', {}, ['designs']);
+      }
+      else if (act === 'layout' && edit) {
+        e.stopPropagation();
+        const L = v.layout || {};
+        const r = await form({ title: 'Layout', text: 'How this vault’s top section is arranged — the merchant sees the same layout.', fields: [
+          { key: 'media', label: 'Demo Deck / Designs & Flows', type: 'select', options: LAYOUT_MEDIA },
+          { key: 'team', label: 'Our Team', type: 'select', options: LAYOUT_TEAM }],
+          values: { media: L.media || 'split', team: L.team || 'top' }, submit: 'Apply' });
+        if (!r) return;
+        v.layout = { media: r.media, team: r.team };
+        applyLayout(root);
+        changed('layout', {}, ['deck', 'designs']);
       }
       else if (act === 'design-exp') {
         e.stopPropagation();
