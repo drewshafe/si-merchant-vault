@@ -138,15 +138,17 @@
 
   // Next Steps buttons. action 'panel' swaps the right-hand panel (the selected one turns gradient);
   // 'link' opens a URL, 'question' opens the ask box, 'deck' opens the deck full screen.
-  const PANELS = { plan: 'Action plan', roi: 'ROI calculator', install: 'Install ShipInsure', examples: 'Live examples & case studies', billing: 'Billing explained + How a claim works', reviews: 'Merchant reviews' };
+  const PANELS = { plan: 'Action plan', roi: 'ROI calculator', install: 'Install ShipInsure', examples: 'Live examples & case studies', billing: 'Billing explained + How a claim works', reviews: 'Merchant reviews', calendar: 'Calendar (book a meeting)' };
+  const DEFAULT_CALENDAR = 'https://calendly.com/drew-shipinsure/100-demo';
   const DARK_PANELS = { install: 1, examples: 1, billing: 1, reviews: 1 };
   const DEFAULT_BUTTONS = () => [
-    { id: uid('b'), label: 'See Action Plan', action: 'panel', panel: 'plan', url: '', style: 'solid' },
     { id: uid('b'), label: 'ROI', action: 'panel', panel: 'roi', url: '', style: 'roi' },
+    { id: uid('b'), label: 'See Action Plan', action: 'panel', panel: 'plan', url: '', style: 'solid' },
     { id: uid('b'), label: 'Install ShipInsure', action: 'panel', panel: 'install', url: '', style: 'solid' },
     { id: uid('b'), label: 'Examples / Case Studies', action: 'panel', panel: 'examples', url: '', style: 'outline' },
     { id: uid('b'), label: 'Billing & Backend Flows', action: 'panel', panel: 'billing', url: '', style: 'outline' },
     { id: uid('b'), label: 'Merchant Reviews', action: 'panel', panel: 'reviews', url: '', style: 'outline' },
+    { id: uid('b'), label: 'Calendar', action: 'panel', panel: 'calendar', url: DEFAULT_CALENDAR, style: 'outline' },
     { id: uid('b'), label: 'I have a question', action: 'question', url: '', style: 'outline' }
   ];
 
@@ -166,11 +168,19 @@
       }
       if (p) { b.action = 'panel'; b.panel = p; if (p === 'plan' && b.style === 'gradient') b.style = 'solid'; }
     });
-    // Action Plan is the first and default Next Steps button — move it to the front if an
-    // older vault (or saved mv_defaults) had another button (e.g. ROI) ahead of it.
     const _bs = v.buttons || [];
-    const _pi = _bs.findIndex(b => b.action === 'panel' && b.panel === 'plan');
-    if (_pi > 0) _bs.unshift(_bs.splice(_pi, 1)[0]);
+    // Calendar joins every vault once, just ahead of "I have a question" (reps can remove it after).
+    if (!v.calendarSeeded) {
+      v.calendarSeeded = true;
+      if (!_bs.some(b => b.action === 'panel' && b.panel === 'calendar')) {
+        const q = _bs.findIndex(b => b.action === 'question');
+        _bs.splice(q < 0 ? _bs.length : q, 0, { id: uid('b'), label: 'Calendar', action: 'panel', panel: 'calendar', url: DEFAULT_CALENDAR, style: 'outline' });
+      }
+    }
+    // ROI is always Next Steps button #1 and Action Plan #2 — older vaults and saved mv_defaults included.
+    const pin = (panel, at) => { const i = _bs.findIndex(b => b.action === 'panel' && b.panel === panel); if (i >= 0 && i !== at) _bs.splice(at, 0, _bs.splice(i, 1)[0]); };
+    pin('roi', 0);
+    pin('plan', _bs.length && _bs[0].panel === 'roi' ? 1 : 0);
     return v;
   }
   const roiButton = v => (v.buttons || []).find(b => b.action === 'panel' && b.panel === 'roi');
@@ -605,6 +615,11 @@
       el.innerHTML = panelHtml(P, v, ctx, st);
       const offs = [];
       el.querySelectorAll('[data-sframe]').forEach(f => offs.push(mountScaled(f)));
+      if (P === 'calendar' && !edit) {
+        const onCal = e => { if (/calendly\.com$/i.test(new URL(e.origin).hostname) && e.data && e.data.event === 'calendly.event_scheduled') track(root, 'click', { label: 'Booked a meeting (Calendar)' }); };
+        window.addEventListener('message', onCal);
+        offs.push(() => window.removeEventListener('message', onCal));
+      }
       st.cleanups.plan = () => offs.forEach(f => f());
     }
   }
@@ -655,6 +670,21 @@
 
   const libImg = n => ASSET('lib/' + n);
 
+  // Calendly inline embed: drop any pinned ?month=, prefill the merchant's first named teammate.
+  function calendarEmbed(url, v) {
+    let u;
+    try { u = new URL(url); } catch (e) { return url; }
+    u.searchParams.delete('month');
+    if (/calendly\.com$/i.test(u.hostname)) {
+      u.searchParams.set('embed_domain', location.hostname || 'drewshafe.github.io');
+      u.searchParams.set('embed_type', 'Inline');
+      u.searchParams.set('hide_gdpr_banner', '1');
+      const m = ((v.team && v.team.merchant) || []).find(p => p.name && p.name.trim());
+      if (m) { u.searchParams.set('name', m.name.trim()); if (m.email) u.searchParams.set('email', m.email.trim()); }
+    }
+    return u.toString();
+  }
+
   function panelHtml(P, v, ctx, st) {
     const edit = ctx.mode === 'edit';
     const L = LIB();
@@ -667,6 +697,13 @@
       return '<div class="mv-pnl-bar">' + (edit ? '<button type="button" class="mv-chip" data-act="roi-link">' + IC.pencil + '<span>Change ROI link</span></button>' : '') +
         '<a class="mv-pnl-open" href="' + esc(url) + '" target="_blank" rel="noopener" data-act="panel-open" data-label="ROI calculator">Open full screen ↗</a></div>' +
         sframe(url, 1180, 0, true);
+    }
+    if (P === 'calendar') {
+      const b = (v.buttons || []).find(x => x.action === 'panel' && x.panel === 'calendar');
+      const url = (b && b.url && b.url.trim()) || DEFAULT_CALENDAR;
+      return '<div class="mv-pnl-bar">' + (edit ? '<button type="button" class="mv-chip" data-act="button-edit" data-id="' + esc(b ? b.id : '') + '">' + IC.pencil + '<span>Change booking link</span></button>' : '') +
+        '<a class="mv-pnl-open" href="' + esc(url) + '" target="_blank" rel="noopener" data-act="panel-open" data-label="Calendar">Open full screen ↗</a></div>' +
+        '<div class="mv-cal"><iframe src="' + esc(calendarEmbed(url, v)) + '" title="Book a meeting"></iframe></div>';
     }
     if (P === 'install') {
       const plat = (v.install && v.install.platform) || 'shopify';
@@ -987,7 +1024,7 @@
         const r = await form({ title: b ? 'Edit button' : 'Add a button', fields: [
           { key: 'label', label: 'Label', required: true, placeholder: 'Install ShipInsure' },
           { key: 'action', label: 'When clicked', type: 'select', options: Object.keys(PANELS).map(k => ['panel:' + k, 'Show panel — ' + PANELS[k]]).concat([['link', 'Open a link (new tab)'], ['question', 'Open “I have a question”'], ['deck', 'Open the demo deck full screen']]) },
-          { key: 'url', label: 'Link (for “Open a link” and the ROI panel)', type: 'url', placeholder: 'https://…' },
+          { key: 'url', label: 'Link (for “Open a link”, the ROI panel and the Calendar booking page)', type: 'url', placeholder: 'https://…' },
           { key: 'style', label: 'Style (the selected panel button always turns gradient)', type: 'select', options: [['outline', 'Outline (white)'], ['solid', 'Solid (periwinkle)'], ['gradient', 'Gradient'], ['roi', 'ROI logo']] },
           { key: 'pos', label: 'Position', type: 'select', options: list.map((x, i) => [String(i), (i + 1) + '. ' + x.label]).concat(b ? [] : [[String(list.length), (list.length + 1) + '. (end)']]) }
         ], values: b ? Object.assign({}, b, { pos: String(list.indexOf(b)), action: b.action === 'panel' ? 'panel:' + b.panel : b.action }) : { action: 'link', style: 'outline', pos: String(list.length) }, danger: b ? 'Remove' : null, submit: b ? 'Save' : 'Add' });
