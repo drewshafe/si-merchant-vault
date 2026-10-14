@@ -34,6 +34,51 @@
     '<rect width="100" height="100" fill="url(#s)"/><g fill="#fff"><circle cx="38" cy="30" r="9"/><circle cx="49" cy="25" r="11"/><circle cx="60" cy="31" r="8"/><rect x="30" y="29" width="38" height="10" rx="5"/></g>' +
     '<path d="M0 72 Q30 56 58 66 T100 62 V100 H0Z" fill="#8cc63f"/><path d="M0 84 Q40 70 100 80 V100 H0Z" fill="#5aa832"/></svg>');
 
+  // ── Email profile photos ────────────────────────────────────────────────
+  // A teammate with no uploaded photo shows their email's public profile photo (Gravatar). Only a SHA-256
+  // hash of the email leaves the browser; people without one keep the placeholder.
+  const _grav = {};
+  function gravatarFor(email) {
+    const e = String(email || '').trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(e) || !(window.crypto && crypto.subtle)) return Promise.resolve(null);
+    if (!_grav[e]) _grav[e] = crypto.subtle.digest('SHA-256', new TextEncoder().encode(e)).then(buf => {
+      const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+      const url = 'https://gravatar.com/avatar/' + hex + '?s=200&d=404';
+      return new Promise(res => { const im = new Image(); im.onload = () => res(url); im.onerror = () => res(null); im.src = url; });
+    }).catch(() => null);
+    return _grav[e];
+  }
+  function hydrateAvatars(scope) {
+    scope.querySelectorAll('img[data-email]').forEach(img => {
+      const email = img.dataset.email;
+      img.removeAttribute('data-email');
+      gravatarFor(email).then(url => { if (url && img.isConnected) img.src = url; });
+    });
+  }
+  const faceImg = p => '<img class="mv-face" alt="" src="' + esc(photoSrc(p && p.photo)) + '"' + (p && !p.photo && p.email ? ' data-email="' + esc(p.email) + '"' : '') + '>';
+
+  // Merchant-side photos are saved inline with their roster (no storage sign-in), so keep them small.
+  function inlinePhoto(file) {
+    if (!/^image\//.test(file.type)) return Promise.reject(new Error('Please choose an image'));
+    return new Promise((res, rej) => {
+      const fr = new FileReader();
+      fr.onerror = () => rej(new Error('Could not read that image'));
+      fr.onload = () => {
+        const im = new Image();
+        im.onerror = () => rej(new Error('Could not read that image'));
+        im.onload = () => {
+          const side = Math.min(im.naturalWidth, im.naturalHeight), S = 160, c = document.createElement('canvas');
+          c.width = c.height = S;
+          // Center-crop to a square, like the round avatar shows it.
+          c.getContext('2d').drawImage(im, (im.naturalWidth - side) / 2, (im.naturalHeight - side) / 2, side, side, 0, 0, S, S);
+          res(c.toDataURL('image/jpeg', 0.82));
+        };
+        im.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
   // ── Icons (24×24 stroke) ────────────────────────────────────────────────
   const P = d => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
   const IC = {
@@ -432,6 +477,8 @@
       '</div></div>';
     ['head', 'welcome', 'team', 'deck', 'designs', 'steps', 'plan'].forEach(p => part(root, p));
     if (!root._mvBound) { bind(root); root._mvBound = true; }
+    if (!root._mvFaces) { root._mvFaces = new MutationObserver(() => hydrateAvatars(root)); root._mvFaces.observe(root, { childList: true, subtree: true }); }
+    hydrateAvatars(root);
     if (!edit) observeSections(root);
   }
 
@@ -688,7 +735,7 @@
     const tel = (p.phone || '').replace(/[^\d+]/g, '');
     const canEdit = edit || (side === 'merchant' && ctx.canTeam);
     return '<div class="mv-person' + (ph ? ' is-placeholder' : '') + (canEdit ? ' is-editable' : '') + '" data-side="' + side + '" data-id="' + esc(p.id) + '"' + (canEdit ? ' data-act="person-edit"' : '') + '>' +
-      '<div class="mv-avatar"><img class="mv-face" alt="" src="' + esc(photoSrc(p.photo)) + '">' + badgeHtml(side, v) + '</div>' +
+      '<div class="mv-avatar">' + faceImg(p) + badgeHtml(side, v) + '</div>' +
       '<div style="min-width:0"><div class="mv-pname">' + esc(ph ? 'First Name' : p.name) + '</div><div class="mv-ptitle">' + esc(p.title || (ph ? 'Title' : '')) + '</div></div>' +
       '<div class="mv-pacts">' +
       '<a class="mv-pact' + (tel ? '' : ' is-off') + '" href="' + (tel ? 'tel:' + esc(tel) : '#') + '" title="' + esc(p.phone || 'No phone') + '" data-act="contact">' + IC.phone + '</a>' +
@@ -699,7 +746,7 @@
   function ownerAvatar(side, v) {
     const t = (v.team && v.team[side]) || [];
     const p = t.find(x => x.name && x.name.trim());
-    return '<div class="mv-avatar" title="' + esc(side === 'si' ? 'ShipInsure' + (p ? ' · ' + p.name : '') : (merchantName(v) || 'Merchant') + (p ? ' · ' + p.name : '')) + '"><img class="mv-face" alt="" src="' + esc(photoSrc(p && p.photo)) + '">' + badgeHtml(side, v) + '</div>';
+    return '<div class="mv-avatar" title="' + esc(side === 'si' ? 'ShipInsure' + (p ? ' · ' + p.name : '') : (merchantName(v) || 'Merchant') + (p ? ' · ' + p.name : '')) + '">' + faceImg(p) + badgeHtml(side, v) + '</div>';
   }
 
   function stageHtml(g, gi, plan, v, ctx) {
@@ -845,7 +892,9 @@
           { key: 'title', label: 'Title', placeholder: side === 'si' ? 'eCommerce Partnerships' : 'Head of eCommerce' },
           { key: 'email', label: 'Email', type: 'email', placeholder: 'name@company.com' },
           { key: 'phone', label: 'Phone', type: 'tel', placeholder: '(555) 555-5555' });
-        if (edit) fields.push({ key: 'photo', label: 'Photo', type: 'file', accept: 'image/*', upload: ctx.upload, placeholder: 'Image link, or upload →' });
+        fields.push({ key: 'photo', label: 'Photo', type: 'file', accept: 'image/*', upload: edit ? ctx.upload : inlinePhoto,
+          placeholder: edit ? 'Image link, or upload →' : 'Upload a photo →' });
+        fields.push({ type: 'note', html: 'Leave blank to use the profile photo linked to their email (Gravatar).' });
         const prevPhoto = p ? (p.photo || '') : '';
         const r = await form({
           title: p ? (side === 'si' ? 'Edit teammate' : 'Edit team member') : (side === 'si' ? 'Add a ShipInsure teammate' : 'Add a team member'),
@@ -857,11 +906,9 @@
         if (r === '__delete') { list.splice(list.indexOf(p), 1); label = 'Removed ' + (p.name || 'a teammate') + ' from the team'; }
         else {
           let photo = prevPhoto;
-          if (edit) {
-            if (r.photo) photo = r.photo;                                   // uploaded / pasted
-            else if (r.rep) photo = repPerson(r.rep).photo;                 // quick pick
-            else if (prevPhoto[0] !== '@') photo = '';                      // cleared
-          }
+          if (r.photo) photo = r.photo;                                     // uploaded / pasted
+          else if (r.rep) photo = repPerson(r.rep).photo;                   // quick pick
+          else if (prevPhoto[0] !== '@') photo = '';                        // cleared → email photo / placeholder
           const vals = { name: r.name, title: r.title, email: r.email, phone: r.phone, photo: photo };
           const empty = !p && list.find(x => !(x.name && x.name.trim()));   // fill a "First Name" placeholder first
           if (p) Object.assign(p, vals); else if (empty) Object.assign(empty, vals); else list.push(person(vals));
